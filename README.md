@@ -6,9 +6,10 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 
 # Arquitectura
 
-- SiriDB: base de datos de series temporales utilizada para almacenar datos obtenidos de los sensores y actuadores ubicados en los dispositivos.
-- SiriDB admin: administrador de la base de datos SiriDB.
-- RethinkDB: base de datos documental utilizada para almcenar datos sobre los dispositivos.
-- Grafana: inicialmente pensado para armar dashboard *(pendiente de prueba)*.
+- **SiriDB**: base de datos de series temporales utilizada para almacenar datos obtenidos de los sensores y actuadores ubicados en los dispositivos.
+- **SiriDB admin**: administrador de la base de datos SiriDB.
+- **RethinkDB**: base de datos documental utilizada para almcenar datos sobre los dispositivos.
+- NodeJS: 
+- **Grafana**: inicialmente pensado para armar dashboard *(pendiente de prueba)*.
 
 
