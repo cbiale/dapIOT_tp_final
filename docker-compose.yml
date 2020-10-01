@@ -1,0 +1,62 @@
+version: '3'
+
+volumes:
+    grafana-storage: {}
+
+services:
+
+    grafana:
+        build: 
+            context: ./grafana
+        hostname: grafana
+        container_name: grafana
+        restart: always
+        volumes:
+        - grafana-storage:/var/lib/grafana
+        ports: 
+        - 3000:3000
+        networks:
+        - tp-net
+
+    siridb:
+        build: 
+            context: ./siridb
+        hostname: siridb
+        container_name: siridb
+        restart: always        
+        ports: 
+        - 9000:9000
+        - 9010:9010
+        - 9020:9020
+        - 9080:8080
+        networks:
+        - tp-net
+
+    siridb-admin:
+        build: 
+            context: ./siridb-admin
+        hostname: siridb-admin
+        container_name: siridb-admin
+        restart: always     
+        ports: 
+        - 9180:8080
+        depends_on:
+        - siridb
+        networks:
+        - tp-net
+
+    rethinkdb:
+        image: rethinkdb:2.4.1
+        hostname: rethinkdb
+        container_name: rethinkdb
+        restart: always
+        ports: 
+        - 8080:8080
+        volumes:
+        - $PWD:/data/r1
+        networks:
+        - tp-net
+
+networks:
+    tp-net:
+        driver: bridge
