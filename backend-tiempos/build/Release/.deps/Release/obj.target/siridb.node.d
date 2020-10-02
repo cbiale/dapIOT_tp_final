@@ -1,0 +1,1 @@
+cmd_Release/obj.target/siridb.node := g++ -o Release/obj.target/siridb.node -shared -pthread -rdynamic -m64  -Wl,-soname=siridb.node -Wl,--start-group Release/obj.target/siridb/addon.o Release/obj.target/siridb/sdbcl.o Release/obj.target/siridb/v8qpack.o -Wl,--end-group -lsiridb -lqpack -lsuv -luv
