@@ -57,6 +57,21 @@ services:
         networks:
         - tp-net
 
+    backend-tiempos:
+        build: 
+            context: ./backend-tiempos
+        environment: 
+        - HOST=siridb
+        hostname: backend-tiempos
+        container_name: backend-tiempos
+        restart: always     
+        ports: 
+        - 3001:3001
+        depends_on:
+        - siridb
+        networks:
+        - tp-net
+    
 networks:
     tp-net:
         driver: bridge

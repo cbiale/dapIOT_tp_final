@@ -1,6 +1,6 @@
 // base de datos
 const sdb = require('../../build/Release/siridb');
-let siridb = new sdb.SiriDBClient("iris", "siri", "iot", "localhost", 9000);
+let siridb = new sdb.SiriDBClient("iris", "siri", "iot", process.env.HOST || localhost, 9000);
 
 // iniciar base de datos
 siridb.connect((err) => {
