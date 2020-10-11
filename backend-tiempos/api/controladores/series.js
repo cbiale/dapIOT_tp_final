@@ -29,21 +29,39 @@ exports.obtenerDatos = async function (req, res, next) {
 // insertar datos en una serie
 exports.insertarDatos = async function (req, resp, next) {
 
+    // datos a recibir
+    const tipo = req.body.tipo;
     const serie = req.body.serie;
-    const tiempo = req.body.tiempo;
-    const valor = req.body.valor;
+    const tiempo = Number.parseInt(req.body.tiempo, 10);
 
-    // inserto datos en la serie
-    siridb.insert([{
-        name: serie,
-        points: [
+    // tipo de datos a guardar (float o string)
+    let valor;
+    if (tipo === 'float') {
+        valor = Number.parseFloat(req.body.valor, 10);
+    } else {
+        valor = req.body.valor;
+    } 
+    
+    // defino objeto a guardar
+    let objeto = [{
+        type: tipo,
+        name: serie,  
+        points: [         
             [tiempo, valor]
         ]
-    }], (resp, status) => {
-        console.log(`Resultado de insertar: ${status}`);
-        console.log(resp);
-        resp.status(201).end();
-    });
+    }];
 
+    console.log(objeto);
+
+    // inserto datos en la serie
+    siridb.insert(objeto, (resultado, status) => {
+        if (status) {
+            console.error(`Error: ${resultado.error_msg} (${status})`);
+            res.status(400).json({ error: '400', mensaje: 'Error al insertar' });
+        } else {
+            console.log(resultado.success_msg);
+            resp.status(201).end();  
+        }
+    });
 
 };
