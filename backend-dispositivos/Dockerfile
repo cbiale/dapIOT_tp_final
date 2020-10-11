@@ -3,6 +3,6 @@ WORKDIR /home/nodejs/app
 COPY package.json .
 RUN npm install --production
 COPY . .
-EXPOSE 3001
+EXPOSE 3000
 ENV  NODE_ENV production
 CMD ["node", "index.js"]

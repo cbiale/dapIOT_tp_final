@@ -8,6 +8,21 @@ r.connect({ host: process.env.HOST || "localhost", port: 28015 }, function (err,
   }
   r.conn = conn;
   console.log('Conectado a la base de datos rethinkdb');
+  iniciar();
 })
+
+async function iniciar() {
+  let dbs = await r.dbList().run(r.conn);
+
+  if (! dbs.find(db => db === 'iot')) {
+    await r.dbCreate('iot').run(r.conn);
+    await r.db('iot').tableCreate('dispositivos').run(r.conn);
+    await r.db('iot').tableCreate('entidades').run(r.conn);
+    await r.db('iot').tableCreate('sensores').run(r.conn);
+    await r.db('iot').tableCreate('actuadores').run(r.conn);
+  }
+}
+
+
 
 module.exports = r;

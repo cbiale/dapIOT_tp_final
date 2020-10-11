@@ -3,7 +3,9 @@ let r = require('../db/db');
 // listado de dispositivos
 exports.listarDispositivos = async function (req, res, next) {
     try {
-        var datos = await r.db('iot').table('dispositivos').run(r.conn);
+        var datos = await r.db('iot').table('dispositivos').filter(
+            r.row('borrado').eq(0), { default: true }
+        ).run(r.conn);
     } catch (err) {
         throw new Error(err);
         // analizar console.warn(err);
@@ -18,10 +20,12 @@ exports.obtenerDispositivo = async function (req, res, next) {
     console.log(`Obteniendo dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).run(r.conn);
+        var resultado = await r.db('iot').table('dispositivos').get(id).filter(
+            r.row('borrado').eq(0), { default: true }
+        ).
+            run(r.conn);
     } catch (err) {
-        throw new Error(err);
-        // analizar console.warn(err);
+        console.warn(err);
     }
     res.status(200).json(resultado);
 };
@@ -32,10 +36,62 @@ exports.eliminarDispositivo = async function (req, res, next) {
     console.log(`Eliminando dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).delete().run(r.conn);
+        var resultado = await r.db('iot').table('dispositivos').get(id).update(
+            { borrado: 1 }
+        ).run(r.conn);
+    } catch (err1) {
+        console.warn(err);
+    }
+    res.status(200).json(resultado);
+};
+
+// agregar dispositivo
+exports.agregarDispositivo = async function (req, res, next) {
+    console.log(`Agregando dispositivo...`);
+
+    // datos a recibir
+    const denominacion = req.body.denominacion;
+    const longitud = Number.parseFloat(req.body.longitud, 10);
+    const latitud = Number.parseFloat(req.body.latitud, 10);
+
+    try {
+        // inserto dispositivo
+        var resultado = await r.db('iot').table('dispositivos').insert
+            (
+                {
+                    denominacion: denominacion,
+                    ubicacion: r.point(longitud, latitud),
+                    borrado: 0
+                }
+            ).
+            run(r.conn);
+        res.status(201).end();
     } catch (err) {
-        throw new Error(err);
-        // analizar console.warn(err);
+        console.warn(err);
+        res.status(400).json({ error: '400', mensaje: 'Error al insertar' });
+    }
+};
+
+// modificar dispositivo
+exports.modificarDispositivo = async function (req, res, next) {
+    const id = req.params.id;
+    console.log(`Modificando dispositivo: ${id}`);
+
+    // datos a recibir
+    const denominacion = req.body.denominacion;
+    const longitud = Number.parseFloat(req.body.longitud, 10);
+    const latitud = Number.parseFloat(req.body.latitud, 10);
+
+    try {
+        var resultado = await r.db('iot').table('dispositivos').get(id).update(
+            {
+                denominacion: denominacion,
+                ubicacion: r.point(longitud, latitud),
+                borrado: 0
+            }
+        ).run(r.conn);
+    } catch (err) {
+        console.warn(err);
     }
     res.status(200).json(resultado);
 };
