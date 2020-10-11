@@ -2,3 +2,4 @@
 # http://git-scm.com/docs/gitignore
 
 /backend-tiempos/node_modules
+/backend-dispositivos/node_modules

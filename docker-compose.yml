@@ -55,6 +55,36 @@ services:
         - siridb
         networks:
         - tp-net
+
+    backend-tiempos:
+        build: 
+            context: ./backend-tiempos
+        environment: 
+        - HOST=siridb
+        hostname: backend-tiempos
+        container_name: backend-tiempos
+        restart: always     
+        ports: 
+        - 3001:3001
+        depends_on:
+        - siridb
+        networks:
+        - tp-net
+
+    backend-dispositivos:
+        build: 
+            context: ./backend-dispositivos
+        environment: 
+        - HOST=rethinkdb
+        hostname: backend-dispositivos
+        container_name: backend-dispositivos
+        restart: always     
+        ports: 
+        - 3000:3000
+        depends_on:
+        - rethinkdb
+        networks:
+        - tp-net
     
 networks:
     tp-net:
