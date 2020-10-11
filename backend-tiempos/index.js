@@ -3,13 +3,13 @@ const cors = require('cors');
 const express = require('express');
 const app = express()
 const puerto = 3001
-const sensoresRuteador = require('./api/rutas/sensores');
+const seriesRuteador = require('./api/rutas/series');
 
 app.use(express.urlencoded( {extended: true})); // body parser
 app.use(cors()); // uso de cors
 
 // rutas
-app.use('/sensores', sensoresRuteador);
+app.use('/series', seriesRuteador);
 
 // listener
 app.listen(puerto, () => {
