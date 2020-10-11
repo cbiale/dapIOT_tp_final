@@ -11,4 +11,10 @@ siridb.connect((err) => {
   }
 });
 
+// si se cierra la conexión
+siridb.onClose((msg) => {
+  console.log(msg);
+});
+
+
 module.exports = siridb;
