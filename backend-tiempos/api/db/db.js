@@ -7,7 +7,7 @@ siridb.connect((err) => {
   if (err) {
     throw new Error(err);
   } else {
-    console.log('Conectado a la base de datos');
+    console.log('Conectado a la base de datos siridb');
   }
 });
 
