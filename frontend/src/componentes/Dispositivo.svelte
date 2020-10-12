@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import {dispositivosServicio} from "../servicios/dispositivos.servicio";
 
   // dato pasado al componente
   export let id;
@@ -8,10 +9,9 @@
   let dispositivo;
 
   onMount(async () => {
-    console.log(id);
-    await fetch(`http://localhost:3000/api/v1/dispositivos/${id}`)
-      .then((datos) => datos.json())
-      .then((resultado) => (dispositivo = resultado));      
+    await dispositivosServicio.obtenerDispositivo(id)
+      .then((respuesta) => respuesta.json())
+      .then((resultado) => (dispositivo = resultado));
   });
 </script>
 

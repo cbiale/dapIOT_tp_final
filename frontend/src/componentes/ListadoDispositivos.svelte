@@ -4,23 +4,22 @@
   import "@smui/data-table/bare.css";
   import Button, { Label, Icon } from "@smui/button/bare.js";
   import "@smui/button/bare.css";
+  
+  import {dispositivosServicio} from "../servicios/dispositivos.servicio";
 
   export let dispositivos = [];
   let id;
 
   onMount(async () => {
-    await fetch(`http://localhost:3000/api/v1/dispositivos`)
-      .then((datos) => datos.json())
+    await dispositivosServicio.listarDispositivos()
+      .then((respuesta) => respuesta.json())
       .then((resultado) => (dispositivos = resultado));
   });
 
   async function eliminar(id) {
-    console.log(id);
-    await fetch(`http://localhost:3000/api/v1/dispositivos/` + id, {
-      method: 'DELETE'
-    });
-    await fetch(`http://localhost:3000/api/v1/dispositivos`)
-      .then((datos) => datos.json()) 
+    await dispositivosServicio.eliminarDispositivo(id);
+    await dispositivosServicio.listarDispositivos()
+      .then((respuesta) => respuesta.json())
       .then((resultado) => (dispositivos = resultado));
   };
 </script>
