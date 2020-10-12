@@ -5,14 +5,24 @@
   import Button, { Label, Icon } from "@smui/button/bare.js";
   import "@smui/button/bare.css";
 
-  //export let parametros;
   export let dispositivos = [];
+  let id;
 
   onMount(async () => {
-    await fetch(`http://localhost:3000/v1/dispositivos`)
+    await fetch(`http://localhost:3000/api/v1/dispositivos`)
       .then((datos) => datos.json())
       .then((resultado) => (dispositivos = resultado));
   });
+
+  async function eliminar(id) {
+    console.log(id);
+    await fetch(`http://localhost:3000/api/v1/dispositivos/` + id, {
+      method: 'DELETE'
+    });
+    await fetch(`http://localhost:3000/api/v1/dispositivos`)
+      .then((datos) => datos.json()) 
+      .then((resultado) => (dispositivos = resultado));
+  };
 </script>
 
 <style>
@@ -40,7 +50,12 @@
             <Cell>{dispositivo.id}</Cell>
             <Cell>{dispositivo.denominacion}</Cell>
             <Cell>
-              <a href="dispositivos/{dispositivo.id}"> > </a>
+              <a href="/dispositivos/{dispositivo.id}"> > </a>
+            </Cell>
+            <Cell>
+              <Button on:click={() => eliminar(dispositivo.id)}>
+                <Label>Eliminar</Label>
+              </Button>              
             </Cell>
           </Row>
         {/each}

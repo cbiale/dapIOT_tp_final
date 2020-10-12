@@ -9,10 +9,9 @@
 
   onMount(async () => {
     console.log(id);
-    await fetch(`http://localhost:3000/v1/dispositivos/` + id)
-      .then((datos) => console.log(datos) )
+    await fetch(`http://localhost:3000/api/v1/dispositivos/${id}`)
       .then((datos) => datos.json())
-      .then((resultado) => (dispositivo = resultado));
+      .then((resultado) => (dispositivo = resultado));      
   });
 </script>
 
