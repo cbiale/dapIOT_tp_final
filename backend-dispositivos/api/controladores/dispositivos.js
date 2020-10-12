@@ -65,7 +65,7 @@ exports.agregarDispositivo = async function (req, res, next) {
                 }
             ).
             run(r.conn);
-        res.status(201).end();
+        res.status(201).json();
     } catch (err) {
         console.warn(err);
         res.status(400).json({ error: '400', mensaje: 'Error al insertar' });

@@ -16104,7 +16104,7 @@ var app = (function (L) {
     const dispositivoEsquema = ObjectSchema().shape({
         denominacion: StringSchema()
             .required("Debe dar una denominación al dispositivo"),
-        latitud: NumberSchema().typeError("Debe especificar un valor")
+            latitud: NumberSchema().typeError("Debe especificar un valor")
             .max(90, "Valor máximo de 90")
             .min(-90, "Valor mínimo de -90")
             .required("Debe la latitud donde se encuentra el dispositivo"),
@@ -16160,7 +16160,8 @@ var app = (function (L) {
 
     	button = new Button_1({
     			props: {
-    				variant: "outlined",
+    				color: "secondary",
+    				variant: "raised",
     				type: "submit",
     				$$slots: { default: [create_default_slot_4$1] },
     				$$scope: { ctx }
@@ -16201,33 +16202,33 @@ var app = (function (L) {
     			if (if_block2) if_block2.c();
     			t14 = space();
     			create_component(button.$$.fragment);
-    			add_location(b, file$b, 80, 15, 2455);
-    			add_location(p, file$b, 80, 8, 2448);
+    			add_location(b, file$b, 80, 14, 2554);
+    			add_location(p, file$b, 80, 8, 2548);
     			attr_dev(label0, "for", "denominacion");
-    			add_location(label0, file$b, 82, 12, 2550);
+    			add_location(label0, file$b, 82, 12, 2644);
     			attr_dev(input0, "id", "denominacion");
     			attr_dev(input0, "name", "denominacion");
     			attr_dev(input0, "type", "text");
     			attr_dev(input0, "placeholder", "denominación del dispositivo");
-    			add_location(input0, file$b, 84, 16, 2631);
-    			add_location(div0, file$b, 83, 12, 2609);
+    			add_location(input0, file$b, 84, 16, 2725);
+    			add_location(div0, file$b, 83, 12, 2703);
     			attr_dev(label1, "for", "latitud");
-    			add_location(label1, file$b, 92, 12, 2969);
+    			add_location(label1, file$b, 92, 12, 3063);
     			attr_dev(input1, "id", "latitud");
     			attr_dev(input1, "name", "latitud");
     			attr_dev(input1, "type", "text");
     			attr_dev(input1, "placeholder", "latitud del dispositivo");
-    			add_location(input1, file$b, 94, 16, 3040);
-    			add_location(div1, file$b, 93, 12, 3018);
+    			add_location(input1, file$b, 94, 16, 3134);
+    			add_location(div1, file$b, 93, 12, 3112);
     			attr_dev(label2, "for", "longitud");
-    			add_location(label2, file$b, 102, 12, 3348);
+    			add_location(label2, file$b, 102, 12, 3442);
     			attr_dev(input2, "id", "longitud");
     			attr_dev(input2, "name", "longitud");
     			attr_dev(input2, "type", "text");
     			attr_dev(input2, "placeholder", "longitud del dispositivo");
-    			add_location(input2, file$b, 104, 16, 3421);
-    			add_location(div2, file$b, 103, 12, 3399);
-    			add_location(form, file$b, 81, 8, 2496);
+    			add_location(input2, file$b, 104, 16, 3515);
+    			add_location(div2, file$b, 103, 12, 3493);
+    			add_location(form, file$b, 81, 8, 2590);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -16462,7 +16463,7 @@ var app = (function (L) {
     	return block;
     }
 
-    // (113:12) <Button variant="outlined" type="submit">
+    // (113:12) <Button color="secondary" variant="raised" type="submit">
     function create_default_slot_4$1(ctx) {
     	let t;
 
@@ -16482,14 +16483,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_4$1.name,
     		type: "slot",
-    		source: "(113:12) <Button variant=\\\"outlined\\\" type=\\\"submit\\\">",
+    		source: "(113:12) <Button color=\\\"secondary\\\" variant=\\\"raised\\\" type=\\\"submit\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (120:12) <Label>
+    // (122:12) <Label>
     function create_default_slot_3$1(ctx) {
     	let t;
 
@@ -16509,14 +16510,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$1.name,
     		type: "slot",
-    		source: "(120:12) <Label>",
+    		source: "(122:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (119:8) <Button variant="outlined">
+    // (121:8) <Button variant="outlined">
     function create_default_slot_2$1(ctx) {
     	let label;
     	let current;
@@ -16564,14 +16565,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$1.name,
     		type: "slot",
-    		source: "(119:8) <Button variant=\\\"outlined\\\">",
+    		source: "(121:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (125:12) <Label>
+    // (127:12) <Label>
     function create_default_slot_1$1(ctx) {
     	let t;
 
@@ -16591,14 +16592,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$1.name,
     		type: "slot",
-    		source: "(125:12) <Label>",
+    		source: "(127:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (124:8) <Button variant="outlined">
+    // (126:8) <Button variant="outlined">
     function create_default_slot$2(ctx) {
     	let label;
     	let current;
@@ -16646,7 +16647,7 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$2.name,
     		type: "slot",
-    		source: "(124:8) <Button variant=\\\"outlined\\\">",
+    		source: "(126:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
@@ -16702,13 +16703,13 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button1.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$b, 77, 4, 2396);
-    			add_location(hr, file$b, 116, 4, 3824);
+    			add_location(h2, file$b, 77, 4, 2496);
+    			add_location(hr, file$b, 118, 4, 3964);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$b, 117, 4, 3834);
+    			add_location(a0, file$b, 119, 4, 3975);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$b, 122, 4, 3946);
-    			add_location(main, file$b, 75, 0, 2380);
+    			add_location(a1, file$b, 124, 4, 4087);
+    			add_location(main, file$b, 76, 0, 2485);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -16842,8 +16843,8 @@ var app = (function (L) {
 
     	const guardar = () => {
     		dispositivoEsquema.validate(valores, { abortEarly: false }).then(() => {
-    			alert(JSON.stringify(valores, null, 2));
-    			dispositivosServicio.modificarDispositivo(dispositivo.id, valores);
+    			$$invalidate(1, valores.denominacion = valores.denominacion.toUpperCase(), valores);
+    			dispositivosServicio.modificarDispositivo(dispositivo.id, valores).then(() => location.replace("/dispositivos"));
     		}).catch(err => $$invalidate(2, errores = capturarErrores(err)));
     	};
 
@@ -16947,7 +16948,7 @@ var app = (function (L) {
     /* src/componentes/NuevoDispositivo.svelte generated by Svelte v3.29.0 */
     const file$c = "src/componentes/NuevoDispositivo.svelte";
 
-    // (60:12) {#if errores.denominacion}
+    // (63:12) {#if errores.denominacion}
     function create_if_block_2$1(ctx) {
     	let t_value = /*errores*/ ctx[1].denominacion + "";
     	let t;
@@ -16971,14 +16972,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block_2$1.name,
     		type: "if",
-    		source: "(60:12) {#if errores.denominacion}",
+    		source: "(63:12) {#if errores.denominacion}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (70:12) {#if errores.latitud}
+    // (73:12) {#if errores.latitud}
     function create_if_block_1$2(ctx) {
     	let t_value = /*errores*/ ctx[1].latitud + "";
     	let t;
@@ -17002,14 +17003,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block_1$2.name,
     		type: "if",
-    		source: "(70:12) {#if errores.latitud}",
+    		source: "(73:12) {#if errores.latitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (80:12) {#if errores.longitud}
+    // (83:12) {#if errores.longitud}
     function create_if_block$4(ctx) {
     	let t_value = /*errores*/ ctx[1].longitud + "";
     	let t;
@@ -17033,14 +17034,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block$4.name,
     		type: "if",
-    		source: "(80:12) {#if errores.longitud}",
+    		source: "(83:12) {#if errores.longitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (82:8) <Button variant="outlined" type="submit">
+    // (85:8) <Button color="secondary" variant="raised" type="submit">
     function create_default_slot_4$2(ctx) {
     	let t;
 
@@ -17060,14 +17061,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_4$2.name,
     		type: "slot",
-    		source: "(82:8) <Button variant=\\\"outlined\\\" type=\\\"submit\\\">",
+    		source: "(85:8) <Button color=\\\"secondary\\\" variant=\\\"raised\\\" type=\\\"submit\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (88:12) <Label>
+    // (91:12) <Label>
     function create_default_slot_3$2(ctx) {
     	let t;
 
@@ -17087,14 +17088,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$2.name,
     		type: "slot",
-    		source: "(88:12) <Label>",
+    		source: "(91:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (87:8) <Button variant="outlined">
+    // (90:8) <Button variant="outlined">
     function create_default_slot_2$2(ctx) {
     	let label;
     	let current;
@@ -17142,14 +17143,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$2.name,
     		type: "slot",
-    		source: "(87:8) <Button variant=\\\"outlined\\\">",
+    		source: "(90:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (93:12) <Label>
+    // (96:12) <Label>
     function create_default_slot_1$2(ctx) {
     	let t;
 
@@ -17169,14 +17170,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$2.name,
     		type: "slot",
-    		source: "(93:12) <Label>",
+    		source: "(96:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (92:8) <Button variant="outlined">
+    // (95:8) <Button variant="outlined">
     function create_default_slot$3(ctx) {
     	let label;
     	let current;
@@ -17224,7 +17225,7 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$3.name,
     		type: "slot",
-    		source: "(92:8) <Button variant=\\\"outlined\\\">",
+    		source: "(95:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
@@ -17272,7 +17273,8 @@ var app = (function (L) {
 
     	button0 = new Button_1({
     			props: {
-    				variant: "outlined",
+    				color: "secondary",
+    				variant: "raised",
     				type: "submit",
     				$$slots: { default: [create_default_slot_4$2] },
     				$$scope: { ctx }
@@ -17339,38 +17341,38 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button2.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$c, 48, 4, 1259);
+    			add_location(h2, file$c, 51, 4, 1411);
     			attr_dev(label0, "for", "denominacion");
-    			add_location(label0, file$c, 51, 8, 1341);
+    			add_location(label0, file$c, 54, 8, 1493);
     			attr_dev(input0, "id", "denominacion");
     			attr_dev(input0, "name", "denominacion");
     			attr_dev(input0, "type", "text");
     			attr_dev(input0, "placeholder", "denominación del dispositivo");
-    			add_location(input0, file$c, 53, 12, 1414);
-    			add_location(div0, file$c, 52, 8, 1396);
+    			add_location(input0, file$c, 56, 12, 1566);
+    			add_location(div0, file$c, 55, 8, 1548);
     			attr_dev(label1, "for", "latitud");
-    			add_location(label1, file$c, 61, 8, 1720);
+    			add_location(label1, file$c, 64, 8, 1872);
     			attr_dev(input1, "id", "latitud");
     			attr_dev(input1, "name", "latitud");
     			attr_dev(input1, "type", "text");
     			attr_dev(input1, "placeholder", "latitud del dispositivo");
-    			add_location(input1, file$c, 63, 12, 1783);
-    			add_location(div1, file$c, 62, 8, 1765);
+    			add_location(input1, file$c, 66, 12, 1935);
+    			add_location(div1, file$c, 65, 8, 1917);
     			attr_dev(label2, "for", "longitud");
-    			add_location(label2, file$c, 71, 8, 2059);
+    			add_location(label2, file$c, 74, 8, 2211);
     			attr_dev(input2, "id", "longitud");
     			attr_dev(input2, "name", "longitud");
     			attr_dev(input2, "type", "text");
     			attr_dev(input2, "placeholder", "longitud del dispositivo");
-    			add_location(input2, file$c, 73, 12, 2124);
-    			add_location(div2, file$c, 72, 8, 2106);
-    			add_location(form, file$c, 50, 4, 1291);
-    			add_location(hr, file$c, 84, 4, 2481);
+    			add_location(input2, file$c, 76, 12, 2276);
+    			add_location(div2, file$c, 75, 8, 2258);
+    			add_location(form, file$c, 53, 4, 1443);
+    			add_location(hr, file$c, 87, 4, 2649);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$c, 85, 4, 2492);
+    			add_location(a0, file$c, 88, 4, 2660);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$c, 90, 4, 2604);
-    			add_location(main, file$c, 47, 0, 1248);
+    			add_location(a1, file$c, 93, 4, 2772);
+    			add_location(main, file$c, 50, 0, 1400);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -17564,8 +17566,8 @@ var app = (function (L) {
 
     	const guardar = () => {
     		dispositivoEsquema.validate(valores, { abortEarly: false }).then(() => {
-    			alert(JSON.stringify(valores, null, 2));
-    			dispositivosServicio.agregarDispositivo(valores);
+    			$$invalidate(0, valores.denominacion = valores.denominacion.toUpperCase(), valores);
+    			dispositivosServicio.agregarDispositivo(valores).then(() => location.replace("/dispositivos"));
     		}).catch(err => $$invalidate(1, errores = capturarErrores(err)));
     	};
 
@@ -17597,6 +17599,7 @@ var app = (function (L) {
     		Icon,
     		dispositivosServicio,
     		dispositivoEsquema,
+    		Ruteador,
     		dispositivo,
     		valores,
     		errores,
@@ -18542,7 +18545,7 @@ var app = (function (L) {
     const { console: console_1$2 } = globals;
     const file$f = "src/componentes/Mapa.svelte";
 
-    // (90:12) <Label>
+    // (116:12) <Label>
     function create_default_slot_3$4(ctx) {
     	let t;
 
@@ -18562,14 +18565,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$4.name,
     		type: "slot",
-    		source: "(90:12) <Label>",
+    		source: "(116:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (89:8) <Button variant="outlined">
+    // (115:8) <Button variant="outlined">
     function create_default_slot_2$4(ctx) {
     	let label;
     	let current;
@@ -18617,14 +18620,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$4.name,
     		type: "slot",
-    		source: "(89:8) <Button variant=\\\"outlined\\\">",
+    		source: "(115:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (95:12) <Label>
+    // (121:12) <Label>
     function create_default_slot_1$4(ctx) {
     	let t;
 
@@ -18644,14 +18647,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$4.name,
     		type: "slot",
-    		source: "(95:12) <Label>",
+    		source: "(121:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (94:8) <Button variant="outlined">
+    // (120:8) <Button variant="outlined">
     function create_default_slot$5(ctx) {
     	let label;
     	let current;
@@ -18699,14 +18702,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$5.name,
     		type: "slot",
-    		source: "(94:8) <Button variant=\\\"outlined\\\">",
+    		source: "(120:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (99:4) {#if centro && ubicaciones}
+    // (125:4) {#if centro && ubicaciones}
     function create_if_block$5(ctx) {
     	let div;
     	let accionesMapa_action;
@@ -18719,7 +18722,7 @@ var app = (function (L) {
     			attr_dev(div, "class", "map");
     			set_style(div, "height", "400px");
     			set_style(div, "width", "100%");
-    			add_location(div, file$f, 99, 8, 2939);
+    			add_location(div, file$f, 125, 8, 4302);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -18740,7 +18743,7 @@ var app = (function (L) {
     		block,
     		id: create_if_block$5.name,
     		type: "if",
-    		source: "(99:4) {#if centro && ubicaciones}",
+    		source: "(125:4) {#if centro && ubicaciones}",
     		ctx
     	});
 
@@ -18793,12 +18796,12 @@ var app = (function (L) {
     			t3 = space();
     			if (if_block) if_block.c();
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$f, 85, 4, 2593);
+    			add_location(h2, file$f, 111, 4, 3960);
     			attr_dev(a0, "href", "/dispositivos");
-    			add_location(a0, file$f, 87, 4, 2628);
+    			add_location(a0, file$f, 113, 4, 3995);
     			attr_dev(a1, "href", "/dispositivos/nuevo");
-    			add_location(a1, file$f, 92, 4, 2755);
-    			add_location(main, file$f, 84, 0, 2582);
+    			add_location(a1, file$f, 118, 4, 4122);
+    			add_location(main, file$f, 110, 0, 3949);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -18891,10 +18894,10 @@ var app = (function (L) {
 
     	async function marcadores() {
     		if (dispositivos.length > 0) {
-    			$$invalidate(0, centro = [
-    				dispositivos[0].ubicacion.coordinates[1],
-    				dispositivos[0].ubicacion.coordinates[0]
-    			]);
+    			let coordenada0max = 0;
+    			let coordenada0min = 0;
+    			let coordenada1max = 0;
+    			let coordenada1min = 0;
 
     			for (let i = 0; i < dispositivos.length; i++) {
     				ubicaciones.push([
@@ -18903,13 +18906,41 @@ var app = (function (L) {
     					dispositivos[i].ubicacion.coordinates[0],
     					dispositivos[i].id
     				]);
+
+    				if (i === 0) {
+    					coordenada0max = dispositivos[i].ubicacion.coordinates[1];
+    					coordenada0min = dispositivos[i].ubicacion.coordinates[1];
+    					coordenada1max = dispositivos[i].ubicacion.coordinates[0];
+    					coordenada1min = dispositivos[i].ubicacion.coordinates[0];
+    				} else {
+    					if (coordenada0max < dispositivos[i].ubicacion.coordinates[1]) {
+    						coordenada0max = dispositivos[i].ubicacion.coordinates[1];
+    					}
+
+    					if (coordenada0min > dispositivos[i].ubicacion.coordinates[1]) {
+    						coordenada0min = dispositivos[i].ubicacion.coordinates[1];
+    					}
+
+    					if (coordenada1max < dispositivos[i].ubicacion.coordinates[0]) {
+    						coordenada1max = dispositivos[i].ubicacion.coordinates[0];
+    					}
+
+    					if (coordenada1min > dispositivos[i].ubicacion.coordinates[0]) {
+    						coordenada1min = dispositivos[i].ubicacion.coordinates[0];
+    					}
+    				}
     			}
+
+    			$$invalidate(0, centro = [
+    				(coordenada0max + coordenada0min) / 2,
+    				(coordenada1max + coordenada1min) / 2
+    			]);
     		}
     	}
 
     	function crearMapa(contenedor) {
     		console.log(centro);
-    		let m = L.map(contenedor).setView([centro[0], centro[1]], 13);
+    		let m = L.map(contenedor).setView([centro[0], centro[1]], 9);
 
     		L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     			attribution: `&copy;<a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>,

@@ -7,7 +7,6 @@
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
     import { seriesServicio } from "../servicios/series.servicio";
-
     import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
 
     // dato pasado al componente
@@ -58,8 +57,10 @@
         dispositivoEsquema
             .validate(valores, { abortEarly: false })
             .then(() => {
-                alert(JSON.stringify(valores, null, 2));
-                dispositivosServicio.modificarDispositivo(dispositivo.id, valores);
+                valores.denominacion = valores.denominacion.toUpperCase();
+                dispositivosServicio
+                    .modificarDispositivo(dispositivo.id, valores)
+                    .then(() => location.replace("/dispositivos"));
             })
             .catch((err) => (errores = capturarErrores(err)));
     };
@@ -74,11 +75,10 @@
 </style>
 
 <main>
-    
     <h2>Dispositivo</h2>
 
     {#if dispositivo}
-        <p> Id <b>{dispositivo.id}</b> </p>    
+        <p>Id <b>{dispositivo.id}</b></p>
         <form on:submit|preventDefault={guardar}>
             <label for="denominacion">Denominación</label>
             <div>
@@ -110,11 +110,13 @@
                     placeholder="longitud del dispositivo" />
                 {#if errores.longitud}{errores.longitud}{/if}
             </div>
-            <Button variant="outlined" type="submit">Guardar</Button>
+            <Button color="secondary" variant="raised" type="submit">
+                Guardar
+            </Button>
         </form>
     {/if}
 
-    <hr/>
+    <hr />
     <a href="/">
         <Button variant="outlined">
             <Label>Mapa</Label>
@@ -125,5 +127,4 @@
             <Label>Listado</Label>
         </Button>
     </a>
-
 </main>

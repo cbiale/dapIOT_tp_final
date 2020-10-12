@@ -7,6 +7,7 @@
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
     import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
+    import Ruteador from "../rutas/Ruteador.svelte";
 
     let dispositivo;
 
@@ -30,8 +31,10 @@
         dispositivoEsquema
             .validate(valores, { abortEarly: false })
             .then(() => {
-                alert(JSON.stringify(valores, null, 2));
-                dispositivosServicio.agregarDispositivo(valores);
+                valores.denominacion = valores.denominacion.toUpperCase();
+                dispositivosServicio.agregarDispositivo(valores).
+                then(() => location.replace("/dispositivos") );
+                
             })
             .catch((err) => (errores = capturarErrores(err)));
     };
@@ -79,7 +82,7 @@
                 placeholder="longitud del dispositivo" />
             {#if errores.longitud}{errores.longitud}{/if}
         </div>
-        <Button variant="outlined" type="submit">Guardar</Button>
+        <Button color="secondary" variant="raised" type="submit">Guardar</Button>
     </form>
 
     <hr />

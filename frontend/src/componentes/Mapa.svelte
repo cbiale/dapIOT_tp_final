@@ -23,24 +23,48 @@
 
     async function marcadores() {
         if (dispositivos.length > 0) {
-            centro = [
-                dispositivos[0].ubicacion.coordinates[1],
-                dispositivos[0].ubicacion.coordinates[0],
-            ];
+            let coordenada0max = 0;
+            let coordenada0min = 0;
+            let coordenada1max = 0;
+            let coordenada1min = 0;
             for (let i = 0; i < dispositivos.length; i++) {
                 ubicaciones.push([
                     dispositivos[i].denominacion,
                     dispositivos[i].ubicacion.coordinates[1],
                     dispositivos[i].ubicacion.coordinates[0],
-                    dispositivos[i].id
+                    dispositivos[i].id,
                 ]);
+                if (i === 0) {
+                    coordenada0max = dispositivos[i].ubicacion.coordinates[1];
+                    coordenada0min = dispositivos[i].ubicacion.coordinates[1];
+                    coordenada1max = dispositivos[i].ubicacion.coordinates[0];
+                    coordenada1min = dispositivos[i].ubicacion.coordinates[0];                    
+                } else {
+                    if (coordenada0max < dispositivos[i].ubicacion.coordinates[1]) {
+                        coordenada0max = dispositivos[i].ubicacion.coordinates[1];
+                    }
+                    if (coordenada0min > dispositivos[i].ubicacion.coordinates[1]) {
+                        coordenada0min = dispositivos[i].ubicacion.coordinates[1];
+                    }
+
+                    if (coordenada1max < dispositivos[i].ubicacion.coordinates[0]) {
+                        coordenada1max = dispositivos[i].ubicacion.coordinates[0];
+                    }
+                    if (coordenada1min > dispositivos[i].ubicacion.coordinates[0]) {
+                        coordenada1min = dispositivos[i].ubicacion.coordinates[0];
+                    }                    
+                }
             }
+            centro = [
+                (coordenada0max + coordenada0min) / 2,
+                (coordenada1max + coordenada1min) / 2,
+            ];
         }
     }
 
     function crearMapa(contenedor) {
         console.log(centro);
-        let m = L.map(contenedor).setView([centro[0], centro[1]], 13);
+        let m = L.map(contenedor).setView([centro[0], centro[1]], 9);
         L.tileLayer(
             "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
             {
@@ -60,9 +84,11 @@
 
         for (let i = 0; i < ubicaciones.length; i++) {
             var marker = new L.marker([ubicaciones[i][1], ubicaciones[i][2]])
-                .bindPopup(`${ubicaciones[i][0]} </br>
+                .bindPopup(
+                    `${ubicaciones[i][0]} </br>
                 <a href="/dispositivos/${ubicaciones[i][3]}/dashboard"> ver dashboard </a> </br>
-                <a href="/dispositivos/${ubicaciones[i][3]}"> editarlo </a>`)
+                <a href="/dispositivos/${ubicaciones[i][3]}"> editarlo </a>`
+                )
                 .addTo(mapa);
         }
 
@@ -94,7 +120,7 @@
         <Button variant="outlined">
             <Label>Nuevo dispositivo</Label>
         </Button>
-    </a>    
+    </a>
 
     {#if centro && ubicaciones}
         <div class="map" style="height:400px;width:100%" use:accionesMapa />

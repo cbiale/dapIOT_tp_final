@@ -4,7 +4,7 @@ const dispositivoEsquema = yup.object().shape({
     denominacion: yup
         .string()
         .required("Debe dar una denominación al dispositivo"),
-    latitud: yup
+        latitud: yup
         .number().typeError("Debe especificar un valor")
         .max(90, "Valor máximo de 90")
         .min(-90, "Valor mínimo de -90")
