@@ -85,7 +85,28 @@ services:
         - rethinkdb
         networks:
         - tp-net
-    
+
+    mosquitto:
+        image: eclipse-mosquitto:1.6.12
+        hostname: mosquitto
+        container_name: mosquitto
+        restart: always
+        volumes:
+        - ./mosquitto/:/mosquitto/
+        - ./mosquitto/data
+        - ./mosquitto/log
+        expose:
+        - "1883"
+        - "9001"
+        ports: 
+        - 1883:1883
+        - 9001:9001
+        depends_on:
+        - siridb
+        networks:
+        - tp-net
+        
+
 networks:
     tp-net:
         driver: bridge
