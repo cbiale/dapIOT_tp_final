@@ -13,7 +13,7 @@ app.use(express.urlencoded( {extended: true})); // body parser
 app.use(cors()); // uso de cors
 
 // rutas
-app.use('/v1/dispositivos', dispositivosRuteador);
+app.use('/api/v1/dispositivos', dispositivosRuteador);
 //app.use('/sensores', sensoresRuteador);
 //app.use('/actuadores', actuadoresRuteador);
 //app.use('/entidades', entidadesRuteador);

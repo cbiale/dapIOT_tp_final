@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "file": "bundle.css",
+  "sources": [
+    "Dispositivo.svelte",
+    "ListadoDispositivos.svelte",
+    "NoEncontrado.svelte"
+  ],
+  "sourcesContent": [
+    "<script>\n  import { onMount } from \"svelte\";\n\n  // dato pasado al componente\n  export let id;\n\n  // datos obtenidos del backend\n  let dispositivo;\n\n  onMount(async () => {\n    console.log(id);\n    await fetch(`http://localhost:3000/v1/dispositivos/` + id)\n      .then((datos) => console.log(datos) )\n      .then((datos) => datos.json())\n      .then((resultado) => (dispositivo = resultado));\n  });\n</script>\n\n<style>\n  h2 {\n    color: #ff3e00;\n    text-transform: uppercase;\n    font-size: 4em;\n    font-weight: 100;\n  }\n</style>\n\n<main>\n  <h2>Dispositivo</h2>\n  {#if dispositivo}\n    <p>{dispositivo.id}</p>\n    <p>{dispositivo.denominacion}</p>\n    <a href=\"/\">Volver</a>\n  {/if}\n</main>\n",
+    "<script>\n  import { onMount } from \"svelte\";\n  import DataTable, { Head, Body, Row, Cell } from \"@smui/data-table/bare.js\";\n  import \"@smui/data-table/bare.css\";\n  import Button, { Label, Icon } from \"@smui/button/bare.js\";\n  import \"@smui/button/bare.css\";\n\n  //export let parametros;\n  export let dispositivos = [];\n\n  onMount(async () => {\n    await fetch(`http://localhost:3000/v1/dispositivos`)\n      .then((datos) => datos.json())\n      .then((resultado) => (dispositivos = resultado));\n  });\n</script>\n\n<style>\n    h2 {\n    color: #ff3e00;\n    text-transform: uppercase;\n    font-size: 4em;\n    font-weight: 100;\n  }\n</style>\n\n<main>\n  <h2>Dispositivos</h2>\n  {#if dispositivos}\n    <DataTable table$aria-label=\"Listado de Dispositivos\">\n      <Head>\n        <Row>\n          <Cell>Id dispositivo</Cell>\n          <Cell>Denominación</Cell>\n        </Row>\n      </Head>\n      <Body>\n        {#each dispositivos as dispositivo}\n          <Row>\n            <Cell>{dispositivo.id}</Cell>\n            <Cell>{dispositivo.denominacion}</Cell>\n            <Cell>\n              <a href=\"dispositivos/{dispositivo.id}\"> > </a>\n            </Cell>\n          </Row>\n        {/each}\n      </Body>\n    </DataTable>\n  {/if}\n</main>\n",
+    "<script>\n  /*\n  import { registrar, rutaActiva } from \"./Ruteador.svelte\";\n\n  export let path = \"/*\";\n  export let componente = null;\n\n  registrar({ path, componente });\n  */\n</script>\n\n<style>\n  h2 {\n    color: #ff3e00;\n    text-transform: uppercase;\n    font-size: 4em;\n    font-weight: 100;\n  }\n</style>\n\n<main>\n  <!--\n  {#if $rutaActiva.path === path}\n    <svelte:component this={componente} />\n    <slot />\n  {/if}\n    -->\n  <h2>Lo siento.</h2>\n  <h2>Página no encontrada.</h2>\n  <a href=\"/\">Volver</a>\n</main>\n"
+  ],
+  "names": [],
+  "mappings": "AAmBE,EAAE,eAAC,CAAC,AACF,KAAK,CAAE,OAAO,CACd,cAAc,CAAE,SAAS,CACzB,SAAS,CAAE,GAAG,CACd,WAAW,CAAE,GAAG,AAClB,CAAC;ACNC,EAAE,cAAC,CAAC,AACJ,KAAK,CAAE,OAAO,CACd,cAAc,CAAE,SAAS,CACzB,SAAS,CAAE,GAAG,CACd,WAAW,CAAE,GAAG,AAClB,CAAC;ACXD,EAAE,eAAC,CAAC,AACF,KAAK,CAAE,OAAO,CACd,cAAc,CAAE,SAAS,CACzB,SAAS,CAAE,GAAG,CACd,WAAW,CAAE,GAAG,AAClB,CAAC"
+}

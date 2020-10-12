@@ -4,7 +4,9 @@ let r = require('../db/db');
 exports.listarDispositivos = async function (req, res, next) {
     try {
         var datos = await r.db('iot').table('dispositivos').filter(
-            r.row('borrado').eq(0), { default: true }
+            {
+                borrado: 0
+            }
         ).run(r.conn);
     } catch (err) {
         throw new Error(err);
@@ -20,10 +22,7 @@ exports.obtenerDispositivo = async function (req, res, next) {
     console.log(`Obteniendo dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).filter(
-            r.row('borrado').eq(0), { default: true }
-        ).
-            run(r.conn);
+        var resultado = await r.db('iot').table('dispositivos').get(id).run(r.conn);
     } catch (err) {
         console.warn(err);
     }

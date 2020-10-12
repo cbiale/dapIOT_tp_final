@@ -10,4 +10,5 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 - **SiriDB admin**: administrador de la base de datos SiriDB.
 - **RethinkDB**: base de datos documental utilizada para almcenar datos sobre los dispositivos.
 - **NodeJS**: funcionamiento de back-ends de `dispositivos` y `tiempos`.
+- **Svelte**: framework utilizado para el front-end.
 
