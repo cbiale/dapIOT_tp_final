@@ -8,7 +8,13 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 
 - **SiriDB**: base de datos de series temporales utilizada para almacenar datos obtenidos de los sensores y actuadores ubicados en los dispositivos.
 - **SiriDB admin**: administrador de la base de datos SiriDB.
-- **RethinkDB**: base de datos documental utilizada para almcenar datos sobre los dispositivos.
+- **RethinkDB**: base de datos documental utilizada para almacenar datos sobre los dispositivos.
 - **NodeJS**: funcionamiento de back-ends de `dispositivos` y `tiempos`.
 - **Svelte**: framework utilizado para el front-end.
 
+# Librerías
+
+- **Leaflet**: mapas.
+- **yul**: validaciones.
+- **svelte-frappe-charts**: dashboard.
+- **Svelte Material UI**: componentes Material UI.

@@ -47,6 +47,7 @@ exports.eliminarDispositivo = async function (req, res, next) {
 // agregar dispositivo
 exports.agregarDispositivo = async function (req, res, next) {
     console.log(`Agregando dispositivo...`);
+    console.log(req.body);
 
     // datos a recibir
     const denominacion = req.body.denominacion;
@@ -64,7 +65,7 @@ exports.agregarDispositivo = async function (req, res, next) {
                 }
             ).
             run(r.conn);
-        res.status(201).end();
+        res.status(201).json();
     } catch (err) {
         console.warn(err);
         res.status(400).json({ error: '400', mensaje: 'Error al insertar' });
@@ -75,6 +76,7 @@ exports.agregarDispositivo = async function (req, res, next) {
 exports.modificarDispositivo = async function (req, res, next) {
     const id = req.params.id;
     console.log(`Modificando dispositivo: ${id}`);
+    console.log(req.body);
 
     // datos a recibir
     const denominacion = req.body.denominacion;
