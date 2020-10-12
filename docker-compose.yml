@@ -21,7 +21,7 @@ services:
             context: ./siridb-admin
         hostname: siridb-admin
         container_name: siridb-admin
-        restart: always     
+        # restart: always     
         ports: 
         - 9180:8080
         depends_on:

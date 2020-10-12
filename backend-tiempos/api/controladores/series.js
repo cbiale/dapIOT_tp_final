@@ -12,10 +12,10 @@ exports.obtenerDatos = async function (req, res, next) {
             // consulto la serie
             siridb.query("select * from \"" + id + "\"", (resultado, status) => {
                 console.log(`Estado: ${status}`);
-                console.log(resultado);
+                console.log(resultado[id]);
                 // si funciona retorno datos
                 if (status === 0) {
-                    res.status(200).json(resultado);
+                    res.status(200).json(resultado[id]);
                 } else {
                     res.status(404).json({ error: '404', mensaje: 'No encontrado' });
                 }
@@ -56,7 +56,7 @@ exports.insertarDatos = async function (req, resp, next) {
     // inserto datos en la serie
     siridb.insert(objeto, (resultado, status) => {
         if (status) {
-            console.error(`Error: ${resultado.error_msg} (${status})`);
+            console.log(`Error: ${resultado.error_msg} (${status})`);
             res.status(400).json({ error: '400', mensaje: 'Error al insertar' });
         } else {
             console.log(resultado.success_msg);
