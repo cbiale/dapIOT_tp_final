@@ -5,7 +5,7 @@ const app = express()
 const puerto = 3001
 const seriesRuteador = require('./api/rutas/series');
 
-app.use(express.urlencoded( {extended: true})); // body parser
+app.use(express.json()); // body parser
 app.use(cors()); // uso de cors
 
 // rutas

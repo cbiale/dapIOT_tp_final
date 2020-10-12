@@ -9,7 +9,7 @@ const sensoresRuteador = require('./api/rutas/sensores');
 const actuadoresRuteador = require('./api/rutas/actuadores');
 const entidadesRuteador = require('./api/rutas/entidades');
 
-app.use(express.urlencoded( {extended: true})); // body parser
+app.use(express.json()); // body parser
 app.use(cors()); // uso de cors
 
 // rutas

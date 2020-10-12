@@ -195,31 +195,14 @@ var app = (function (L) {
             }
         }
     }
-    function get_binding_group_value(group, __value, checked) {
-        const value = new Set();
-        for (let i = 0; i < group.length; i += 1) {
-            if (group[i].checked)
-                value.add(group[i].__value);
-        }
-        if (!checked) {
-            value.delete(__value);
-        }
-        return Array.from(value);
-    }
     function children(element) {
         return Array.from(element.childNodes);
     }
+    function set_input_value(input, value) {
+        input.value = value == null ? '' : value;
+    }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
-    }
-    function select_options(select, value) {
-        for (let i = 0; i < select.options.length; i += 1) {
-            const option = select.options[i];
-            option.selected = ~value.indexOf(option.__value);
-        }
-    }
-    function toggle_class(element, name, toggle) {
-        element.classList[toggle ? 'add' : 'remove'](name);
     }
     function custom_event(type, detail) {
         const e = document.createEvent('CustomEvent');
@@ -244,20 +227,6 @@ var app = (function (L) {
     }
     function onDestroy(fn) {
         get_current_component().$$.on_destroy.push(fn);
-    }
-    function createEventDispatcher() {
-        const component = get_current_component();
-        return (type, detail) => {
-            const callbacks = component.$$.callbacks[type];
-            if (callbacks) {
-                // TODO are there situations where events could be dispatched
-                // in a server (non-DOM) environment?
-                const event = custom_event(type, detail);
-                callbacks.slice().forEach(fn => {
-                    fn.call(component, event);
-                });
-            }
-        };
     }
     function setContext(key, context) {
         get_current_component().$$.context.set(key, context);
@@ -304,6 +273,7 @@ var app = (function (L) {
                 set_current_component(component);
                 update(component.$$);
             }
+            set_current_component(null);
             dirty_components.length = 0;
             while (binding_callbacks.length)
                 binding_callbacks.pop()();
@@ -540,7 +510,7 @@ var app = (function (L) {
     }
 
     function dispatch_dev(type, detail) {
-        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.24.1' }, detail)));
+        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.29.0' }, detail)));
     }
     function append_dev(target, node) {
         dispatch_dev("SvelteDOMInsert", { target, node });
@@ -573,10 +543,6 @@ var app = (function (L) {
             dispatch_dev("SvelteDOMRemoveAttribute", { node, attribute });
         else
             dispatch_dev("SvelteDOMSetAttribute", { node, attribute, value });
-    }
-    function prop_dev(node, property, value) {
-        node[property] = value;
-        dispatch_dev("SvelteDOMSetProperty", { node, property, value });
     }
     function set_data_dev(text, data) {
         data = '' + data;
@@ -619,16 +585,6 @@ var app = (function (L) {
     }
 
     const subscriber_queue = [];
-    /**
-     * Creates a `Readable` store that allows reading by subscription.
-     * @param value initial value
-     * @param {StartStopNotifier}start start and stop notifications for subscriptions
-     */
-    function readable(value, start) {
-        return {
-            subscribe: writable(value, start).subscribe,
-        };
-    }
     /**
      * Create a `Writable` store that allows both updating and reading by subscription.
      * @param {*=}value initial value
@@ -678,47 +634,6 @@ var app = (function (L) {
             };
         }
         return { set, update, subscribe };
-    }
-    function derived(stores, fn, initial_value) {
-        const single = !Array.isArray(stores);
-        const stores_array = single
-            ? [stores]
-            : stores;
-        const auto = fn.length < 2;
-        return readable(initial_value, (set) => {
-            let inited = false;
-            const values = [];
-            let pending = 0;
-            let cleanup = noop;
-            const sync = () => {
-                if (pending) {
-                    return;
-                }
-                cleanup();
-                const result = fn(single ? values[0] : values, set);
-                if (auto) {
-                    set(result);
-                }
-                else {
-                    cleanup = is_function(result) ? result : noop;
-                }
-            };
-            const unsubscribers = stores_array.map((store, i) => subscribe(store, (value) => {
-                values[i] = value;
-                pending &= ~(1 << i);
-                if (inited) {
-                    sync();
-                }
-            }, () => {
-                pending |= (1 << i);
-            }));
-            inited = true;
-            sync();
-            return function stop() {
-                run_all(unsubscribers);
-                cleanup();
-            };
-        });
     }
 
     var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
@@ -1961,13 +1876,13 @@ var app = (function (L) {
     })));
     });
 
-    /* src/rutas/Ruteador.svelte generated by Svelte v3.24.1 */
+    /* src/rutas/Ruteador.svelte generated by Svelte v3.29.0 */
 
     const { Object: Object_1 } = globals;
 
     function create_fragment(ctx) {
     	let current;
-    	const default_slot_template = /*$$slots*/ ctx[1].default;
+    	const default_slot_template = /*#slots*/ ctx[1].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[0], null);
 
     	const block = {
@@ -2030,10 +1945,12 @@ var app = (function (L) {
     	validate_store(rutaActiva, "rutaActiva");
     	component_subscribe($$self, rutaActiva, $$value => $$invalidate(2, $rutaActiva = $$value));
     	$$self.$$.on_destroy.push(() => $$unsubscribe_rutaActiva());
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Ruteador", slots, ['default']);
 
     	const configurarPaginas = () => {
     		for (let [path, componente] of Object.entries(rutas)) {
-    			page(path, ctx => set_store_value(rutaActiva, $rutaActiva = { ...componente, parametros: ctx.params }));
+    			page(path, ctx => set_store_value(rutaActiva, $rutaActiva = { ...componente, parametros: ctx.params }, $rutaActiva));
     		}
 
     		// iniciamos page.js
@@ -2052,9 +1969,6 @@ var app = (function (L) {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Ruteador> was created with unknown prop '${key}'`);
     	});
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Ruteador", $$slots, ['default']);
-
     	$$self.$$set = $$props => {
     		if ("$$scope" in $$props) $$invalidate(0, $$scope = $$props.$$scope);
     	};
@@ -2071,7 +1985,7 @@ var app = (function (L) {
     		$rutaActiva
     	});
 
-    	return [$$scope, $$slots];
+    	return [$$scope, slots];
     }
 
     class Ruteador extends SvelteComponentDev {
@@ -2088,7 +2002,7 @@ var app = (function (L) {
     	}
     }
 
-    /* src/rutas/Ruta.svelte generated by Svelte v3.24.1 */
+    /* src/rutas/Ruta.svelte generated by Svelte v3.29.0 */
     const get_default_slot_changes = dirty => ({ parametros: dirty & /*parametros*/ 2 });
     const get_default_slot_context = ctx => ({ parametros: /*parametros*/ ctx[1] });
 
@@ -2173,7 +2087,7 @@ var app = (function (L) {
     // (28:2) {:else}
     function create_else_block(ctx) {
     	let current;
-    	const default_slot_template = /*$$slots*/ ctx[6].default;
+    	const default_slot_template = /*#slots*/ ctx[6].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[5], get_default_slot_context);
 
     	const block = {
@@ -2389,6 +2303,8 @@ var app = (function (L) {
     	let $rutaActiva;
     	validate_store(rutaActiva, "rutaActiva");
     	component_subscribe($$self, rutaActiva, $$value => $$invalidate(2, $rutaActiva = $$value));
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Ruta", slots, ['default']);
     	let { path = "*" } = $$props;
     	let { componente = null } = $$props;
 
@@ -2397,9 +2313,6 @@ var app = (function (L) {
 
     	// invocamos a registrar : path y componente asociado
     	registrar({ path, componente });
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Ruta", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
@@ -2437,7 +2350,7 @@ var app = (function (L) {
     		}
     	};
 
-    	return [path, parametros, $rutaActiva, $$restProps, componente, $$scope, $$slots];
+    	return [path, parametros, $rutaActiva, $$restProps, componente, $$scope, slots];
     }
 
     class Ruta extends SvelteComponentDev {
@@ -2470,7 +2383,7 @@ var app = (function (L) {
     	}
     }
 
-    /* src/rutas/NoEncontrado.svelte generated by Svelte v3.24.1 */
+    /* src/rutas/NoEncontrado.svelte generated by Svelte v3.29.0 */
 
     const file = "src/rutas/NoEncontrado.svelte";
 
@@ -2532,14 +2445,14 @@ var app = (function (L) {
     }
 
     function instance$2($$self, $$props) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("NoEncontrado", slots, []);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<NoEncontrado> was created with unknown prop '${key}'`);
     	});
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("NoEncontrado", $$slots, []);
     	return [];
     }
 
@@ -4563,7 +4476,7 @@ var app = (function (L) {
       }
     }
 
-    /* node_modules/@smui/data-table/DataTable.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/data-table/DataTable.svelte generated by Svelte v3.29.0 */
 
     const { Error: Error_1 } = globals;
     const file$1 = "node_modules/@smui/data-table/DataTable.svelte";
@@ -4579,7 +4492,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[13].default;
+    	const default_slot_template = /*#slots*/ ctx[13].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[12], null);
 
     	let table_levels = [
@@ -4696,6 +4609,9 @@ var app = (function (L) {
     }
 
     function instance$3($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("DataTable", slots, ['default']);
+
     	if (events.ROW_SELECTION_CHANGED !== "MDCDataTable:rowSelectionChanged" || events.SELECTED_ALL !== "MDCDataTable:selectedAll" || events.UNSELECTED_ALL !== "MDCDataTable:unselectedAll") {
     		throw new Error("MDC API has changed!");
     	}
@@ -4786,9 +4702,6 @@ var app = (function (L) {
     		return dataTable.setSelectedRowIds(...args);
     	}
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("DataTable", $$slots, ['default']);
-
     	function div_binding($$value) {
     		binding_callbacks[$$value ? "unshift" : "push"](() => {
     			element = $$value;
@@ -4877,7 +4790,7 @@ var app = (function (L) {
     		getSelectedRowIds,
     		setSelectedRowIds,
     		$$scope,
-    		$$slots,
+    		slots,
     		div_binding
     	];
     }
@@ -4970,7 +4883,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/data-table/Head.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/data-table/Head.svelte generated by Svelte v3.29.0 */
     const file$2 = "node_modules/@smui/data-table/Head.svelte";
 
     function create_fragment$4(ctx) {
@@ -4980,7 +4893,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[4].default;
+    	const default_slot_template = /*#slots*/ ctx[4].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[3], null);
     	let thead_levels = [exclude(/*$$props*/ ctx[2], ["use"])];
     	let thead_data = {};
@@ -5056,11 +4969,11 @@ var app = (function (L) {
     }
 
     function instance$4($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Head", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	setContext("SMUI:data-table:row:header", true);
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Head", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(2, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -5088,7 +5001,7 @@ var app = (function (L) {
     	}
 
     	$$props = exclude_internal_props($$props);
-    	return [use, forwardEvents, $$props, $$scope, $$slots];
+    	return [use, forwardEvents, $$props, $$scope, slots];
     }
 
     class Head extends SvelteComponentDev {
@@ -5113,7 +5026,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/data-table/Body.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/data-table/Body.svelte generated by Svelte v3.29.0 */
     const file$3 = "node_modules/@smui/data-table/Body.svelte";
 
     function create_fragment$5(ctx) {
@@ -5124,7 +5037,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[5].default;
+    	const default_slot_template = /*#slots*/ ctx[5].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[4], null);
 
     	let tbody_levels = [
@@ -5211,12 +5124,12 @@ var app = (function (L) {
     }
 
     function instance$5($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Body", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { class: className = "" } = $$props;
     	setContext("SMUI:data-table:row:header", false);
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Body", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(3, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -5247,7 +5160,7 @@ var app = (function (L) {
     	}
 
     	$$props = exclude_internal_props($$props);
-    	return [use, className, forwardEvents, $$props, $$scope, $$slots];
+    	return [use, className, forwardEvents, $$props, $$scope, slots];
     }
 
     class Body extends SvelteComponentDev {
@@ -5280,7 +5193,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/data-table/Row.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/data-table/Row.svelte generated by Svelte v3.29.0 */
     const file$4 = "node_modules/@smui/data-table/Row.svelte";
 
     function create_fragment$6(ctx) {
@@ -5291,7 +5204,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[8].default;
+    	const default_slot_template = /*#slots*/ ctx[8].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[7], null);
 
     	let tr_levels = [
@@ -5394,6 +5307,8 @@ var app = (function (L) {
     }
 
     function instance$6($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Row", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { class: className = "" } = $$props;
@@ -5424,9 +5339,6 @@ var app = (function (L) {
 
     		return i;
     	}
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Row", $$slots, ['default']);
 
     	function tr_binding($$value) {
     		binding_callbacks[$$value ? "unshift" : "push"](() => {
@@ -5483,7 +5395,7 @@ var app = (function (L) {
     		header,
     		$$props,
     		$$scope,
-    		$$slots,
+    		slots,
     		tr_binding
     	];
     }
@@ -5518,7 +5430,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/data-table/Cell.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/data-table/Cell.svelte generated by Svelte v3.29.0 */
     const file$5 = "node_modules/@smui/data-table/Cell.svelte";
 
     // (14:0) {:else}
@@ -5530,7 +5442,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[12].default;
+    	const default_slot_template = /*#slots*/ ctx[12].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[11], null);
 
     	let td_levels = [
@@ -5634,7 +5546,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[12].default;
+    	const default_slot_template = /*#slots*/ ctx[12].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[11], null);
 
     	let th_levels = [
@@ -5784,6 +5696,8 @@ var app = (function (L) {
     }
 
     function instance$7($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Cell", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let header = getContext("SMUI:data-table:row:header");
     	let { use = [] } = $$props;
@@ -5792,8 +5706,6 @@ var app = (function (L) {
     	let { scope = header ? "col" : undefined } = $$props;
     	let { numeric = false } = $$props;
     	let { checkbox = false } = $$props;
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Cell", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(13, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -5875,7 +5787,7 @@ var app = (function (L) {
     		role,
     		scope,
     		$$scope,
-    		$$slots
+    		slots
     	];
     }
 
@@ -5979,7 +5891,7 @@ var app = (function (L) {
     var css_248z = ".mdc-data-table__content {\n  font-family: Roboto, sans-serif;\n  -moz-osx-font-smoothing: grayscale;\n  -webkit-font-smoothing: antialiased;\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n  font-weight: 400;\n  letter-spacing: 0.0178571429em;\n  text-decoration: inherit;\n  text-transform: inherit;\n}\n\n.mdc-data-table {\n  background-color: #fff;\n  /* @alternate */\n  background-color: var(--mdc-theme-surface, #fff);\n  border-radius: 4px;\n  border-width: 1px;\n  border-style: solid;\n  border-color: rgba(0, 0, 0, 0.12);\n  display: inline-flex;\n  flex-direction: column;\n  box-sizing: border-box;\n  overflow-x: auto;\n}\n.mdc-data-table__row {\n  background-color: inherit;\n}\n\n.mdc-data-table__header-row {\n  background-color: inherit;\n}\n\n.mdc-data-table__row--selected {\n  background-color: rgba(98, 0, 238, 0.04);\n}\n\n.mdc-data-table__row {\n  border-top-color: rgba(0, 0, 0, 0.12);\n}\n\n.mdc-data-table__row {\n  border-top-width: 1px;\n  border-top-style: solid;\n}\n\n.mdc-data-table__row:not(.mdc-data-table__row--selected):hover {\n  background-color: rgba(0, 0, 0, 0.04);\n}\n\n.mdc-data-table__header-cell {\n  color: rgba(0, 0, 0, 0.87);\n}\n\n.mdc-data-table__cell {\n  color: rgba(0, 0, 0, 0.87);\n}\n\n.mdc-data-table__header-row {\n  height: 56px;\n}\n\n.mdc-data-table__row {\n  height: 52px;\n}\n\n.mdc-data-table__cell,\n.mdc-data-table__header-cell {\n  padding-right: 16px;\n  padding-left: 16px;\n}\n\n.mdc-data-table__header-cell--checkbox,\n.mdc-data-table__cell--checkbox {\n  /* @noflip */\n  padding-left: 16px;\n  /* @noflip */\n  padding-right: 0;\n}\n[dir=rtl] .mdc-data-table__header-cell--checkbox, .mdc-data-table__header-cell--checkbox[dir=rtl],\n[dir=rtl] .mdc-data-table__cell--checkbox,\n.mdc-data-table__cell--checkbox[dir=rtl] {\n  /* @noflip */\n  padding-left: 0;\n  /* @noflip */\n  padding-right: 16px;\n}\n\n.mdc-data-table__table {\n  width: 100%;\n  border: 0;\n  white-space: nowrap;\n  border-collapse: collapse;\n}\n\n.mdc-data-table__cell {\n  font-family: Roboto, sans-serif;\n  -moz-osx-font-smoothing: grayscale;\n  -webkit-font-smoothing: antialiased;\n  font-size: 0.875rem;\n  line-height: 1.25rem;\n  font-weight: 400;\n  letter-spacing: 0.0178571429em;\n  text-decoration: inherit;\n  text-transform: inherit;\n}\n\n.mdc-data-table__cell--numeric {\n  text-align: right;\n}\n[dir=rtl] .mdc-data-table__cell--numeric, .mdc-data-table__cell--numeric[dir=rtl] {\n  /* @noflip */\n  text-align: left;\n}\n\n.mdc-data-table__header-cell {\n  font-family: Roboto, sans-serif;\n  -moz-osx-font-smoothing: grayscale;\n  -webkit-font-smoothing: antialiased;\n  font-size: 0.875rem;\n  line-height: 1.375rem;\n  font-weight: 500;\n  letter-spacing: 0.0071428571em;\n  text-decoration: inherit;\n  text-transform: inherit;\n  text-align: left;\n}\n[dir=rtl] .mdc-data-table__header-cell, .mdc-data-table__header-cell[dir=rtl] {\n  /* @noflip */\n  text-align: right;\n}\n\n.mdc-data-table__header-cell--numeric {\n  text-align: right;\n}\n[dir=rtl] .mdc-data-table__header-cell--numeric, .mdc-data-table__header-cell--numeric[dir=rtl] {\n  /* @noflip */\n  text-align: left;\n}\n\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before {\n  background-color: #6200ee;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before {\n    /* @alternate */\n    background-color: var(--mdc-theme-primary, #6200ee);\n  }\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected::before, .mdc-data-table__header-row-checkbox.mdc-checkbox--selected::after,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected::before,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected::after {\n  background-color: #6200ee;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-data-table__header-row-checkbox.mdc-checkbox--selected::before, .mdc-data-table__header-row-checkbox.mdc-checkbox--selected::after,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected::before,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected::after {\n    /* @alternate */\n    background-color: var(--mdc-theme-primary, #6200ee);\n  }\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected:hover::before,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected:hover::before {\n  opacity: 0.04;\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):focus::before, .mdc-data-table__header-row-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded--background-focused::before,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):focus::before,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded--background-focused::before {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded)::after,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded)::after {\n  transition: opacity 150ms linear;\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):active::after,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):active::after {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded,\n.mdc-data-table__row-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded {\n  --mdc-ripple-fg-opacity: 0.12;\n}\n.mdc-data-table__header-row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before, .mdc-data-table__header-row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after,\n.mdc-data-table__row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before,\n.mdc-data-table__row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after {\n  background-color: #6200ee;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-data-table__header-row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before, .mdc-data-table__header-row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after,\n.mdc-data-table__row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before,\n.mdc-data-table__row-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after {\n    /* @alternate */\n    background-color: var(--mdc-theme-primary, #6200ee);\n  }\n}\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate) ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate) ~ .mdc-checkbox__background {\n  border-color: rgba(0, 0, 0, 0.54);\n  background-color: transparent;\n}\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background,\n.mdc-data-table__header-row-checkbox .mdc-checkbox__native-control:enabled:indeterminate ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox .mdc-checkbox__native-control:enabled:indeterminate ~ .mdc-checkbox__background {\n  border-color: #6200ee;\n  /* @alternate */\n  border-color: var(--mdc-theme-primary, #6200ee);\n  background-color: #6200ee;\n  /* @alternate */\n  background-color: var(--mdc-theme-primary, #6200ee);\n}\n@keyframes mdc-checkbox-fade-in-background-ubakzpb {\n  0% {\n    border-color: rgba(0, 0, 0, 0.54);\n    background-color: transparent;\n  }\n  50% {\n    border-color: #6200ee;\n    /* @alternate */\n    border-color: var(--mdc-theme-primary, #6200ee);\n    background-color: #6200ee;\n    /* @alternate */\n    background-color: var(--mdc-theme-primary, #6200ee);\n  }\n}\n@keyframes mdc-checkbox-fade-out-background-ubakzpb {\n  0%, 80% {\n    border-color: #6200ee;\n    /* @alternate */\n    border-color: var(--mdc-theme-primary, #6200ee);\n    background-color: #6200ee;\n    /* @alternate */\n    background-color: var(--mdc-theme-primary, #6200ee);\n  }\n  100% {\n    border-color: rgba(0, 0, 0, 0.54);\n    background-color: transparent;\n  }\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background, .mdc-data-table__header-row-checkbox.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background {\n  animation-name: mdc-checkbox-fade-in-background-ubakzpb;\n}\n.mdc-data-table__header-row-checkbox.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background, .mdc-data-table__header-row-checkbox.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background,\n.mdc-data-table__row-checkbox.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background {\n  animation-name: mdc-checkbox-fade-out-background-ubakzpb;\n}\n\n@keyframes mdc-checkbox-unchecked-checked-checkmark-path {\n  0%, 50% {\n    stroke-dashoffset: 29.7833385;\n  }\n  50% {\n    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);\n  }\n  100% {\n    stroke-dashoffset: 0;\n  }\n}\n@keyframes mdc-checkbox-unchecked-indeterminate-mixedmark {\n  0%, 68.2% {\n    transform: scaleX(0);\n  }\n  68.2% {\n    animation-timing-function: cubic-bezier(0, 0, 0, 1);\n  }\n  100% {\n    transform: scaleX(1);\n  }\n}\n@keyframes mdc-checkbox-checked-unchecked-checkmark-path {\n  from {\n    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);\n    opacity: 1;\n    stroke-dashoffset: 0;\n  }\n  to {\n    opacity: 0;\n    stroke-dashoffset: -29.7833385;\n  }\n}\n@keyframes mdc-checkbox-checked-indeterminate-checkmark {\n  from {\n    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);\n    transform: rotate(0deg);\n    opacity: 1;\n  }\n  to {\n    transform: rotate(45deg);\n    opacity: 0;\n  }\n}\n@keyframes mdc-checkbox-indeterminate-checked-checkmark {\n  from {\n    animation-timing-function: cubic-bezier(0.14, 0, 0, 1);\n    transform: rotate(45deg);\n    opacity: 0;\n  }\n  to {\n    transform: rotate(360deg);\n    opacity: 1;\n  }\n}\n@keyframes mdc-checkbox-checked-indeterminate-mixedmark {\n  from {\n    animation-timing-function: mdc-animation-deceleration-curve-timing-function;\n    transform: rotate(-45deg);\n    opacity: 0;\n  }\n  to {\n    transform: rotate(0deg);\n    opacity: 1;\n  }\n}\n@keyframes mdc-checkbox-indeterminate-checked-mixedmark {\n  from {\n    animation-timing-function: cubic-bezier(0.14, 0, 0, 1);\n    transform: rotate(0deg);\n    opacity: 1;\n  }\n  to {\n    transform: rotate(315deg);\n    opacity: 0;\n  }\n}\n@keyframes mdc-checkbox-indeterminate-unchecked-mixedmark {\n  0% {\n    animation-timing-function: linear;\n    transform: scaleX(1);\n    opacity: 1;\n  }\n  32.8%, 100% {\n    transform: scaleX(0);\n    opacity: 0;\n  }\n}\n.mdc-checkbox {\n  display: inline-block;\n  position: relative;\n  flex: 0 0 18px;\n  box-sizing: content-box;\n  width: 18px;\n  height: 18px;\n  line-height: 0;\n  white-space: nowrap;\n  cursor: pointer;\n  vertical-align: bottom;\n}\n.mdc-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before {\n  background-color: #018786;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-checkbox .mdc-checkbox__native-control:checked ~ .mdc-checkbox__background::before,\n.mdc-checkbox .mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background::before {\n    /* @alternate */\n    background-color: var(--mdc-theme-secondary, #018786);\n  }\n}\n.mdc-checkbox.mdc-checkbox--selected::before, .mdc-checkbox.mdc-checkbox--selected::after {\n  background-color: #018786;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-checkbox.mdc-checkbox--selected::before, .mdc-checkbox.mdc-checkbox--selected::after {\n    /* @alternate */\n    background-color: var(--mdc-theme-secondary, #018786);\n  }\n}\n.mdc-checkbox.mdc-checkbox--selected:hover::before {\n  opacity: 0.04;\n}\n.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):focus::before, .mdc-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded--background-focused::before {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded)::after {\n  transition: opacity 150ms linear;\n}\n.mdc-checkbox.mdc-checkbox--selected:not(.mdc-ripple-upgraded):active::after {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-checkbox.mdc-checkbox--selected.mdc-ripple-upgraded {\n  --mdc-ripple-fg-opacity: 0.12;\n}\n.mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before, .mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after {\n  background-color: #018786;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::before, .mdc-checkbox.mdc-ripple-upgraded--background-focused.mdc-checkbox--selected::after {\n    /* @alternate */\n    background-color: var(--mdc-theme-secondary, #018786);\n  }\n}\n\n.mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate) ~ .mdc-checkbox__background {\n  border-color: rgba(0, 0, 0, 0.54);\n  background-color: transparent;\n}\n\n.mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background,\n.mdc-checkbox__native-control:enabled:indeterminate ~ .mdc-checkbox__background {\n  border-color: #018786;\n  /* @alternate */\n  border-color: var(--mdc-theme-secondary, #018786);\n  background-color: #018786;\n  /* @alternate */\n  background-color: var(--mdc-theme-secondary, #018786);\n}\n\n@keyframes mdc-checkbox-fade-in-background-ubakzq0 {\n  0% {\n    border-color: rgba(0, 0, 0, 0.54);\n    background-color: transparent;\n  }\n  50% {\n    border-color: #018786;\n    /* @alternate */\n    border-color: var(--mdc-theme-secondary, #018786);\n    background-color: #018786;\n    /* @alternate */\n    background-color: var(--mdc-theme-secondary, #018786);\n  }\n}\n@keyframes mdc-checkbox-fade-out-background-ubakzq0 {\n  0%, 80% {\n    border-color: #018786;\n    /* @alternate */\n    border-color: var(--mdc-theme-secondary, #018786);\n    background-color: #018786;\n    /* @alternate */\n    background-color: var(--mdc-theme-secondary, #018786);\n  }\n  100% {\n    border-color: rgba(0, 0, 0, 0.54);\n    background-color: transparent;\n  }\n}\n.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background, .mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background {\n  animation-name: mdc-checkbox-fade-in-background-ubakzq0;\n}\n.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background, .mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__native-control:enabled ~ .mdc-checkbox__background {\n  animation-name: mdc-checkbox-fade-out-background-ubakzq0;\n}\n\n.mdc-checkbox__checkmark {\n  color: #fff;\n}\n\n.mdc-checkbox__mixedmark {\n  border-color: #fff;\n}\n\n.mdc-checkbox__native-control[disabled]:not(:checked):not(:indeterminate) ~ .mdc-checkbox__background {\n  border-color: rgba(0, 0, 0, 0.26);\n}\n\n.mdc-checkbox__native-control[disabled]:checked ~ .mdc-checkbox__background,\n.mdc-checkbox__native-control[disabled]:indeterminate ~ .mdc-checkbox__background {\n  border-color: transparent;\n  background-color: rgba(0, 0, 0, 0.26);\n}\n\n@media screen and (-ms-high-contrast: active) {\n  .mdc-checkbox__mixedmark {\n    margin: 0 1px;\n  }\n}\n.mdc-checkbox--disabled {\n  cursor: default;\n  pointer-events: none;\n}\n\n.mdc-checkbox__background {\n  display: inline-flex;\n  position: absolute;\n  align-items: center;\n  justify-content: center;\n  box-sizing: border-box;\n  width: 18px;\n  height: 18px;\n  border: 2px solid currentColor;\n  border-radius: 2px;\n  background-color: transparent;\n  pointer-events: none;\n  will-change: background-color, border-color;\n  transition: background-color 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1), border-color 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n}\n.mdc-checkbox__background .mdc-checkbox__background::before {\n  background-color: #000;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-checkbox__background .mdc-checkbox__background::before {\n    /* @alternate */\n    background-color: var(--mdc-theme-on-surface, #000);\n  }\n}\n\n.mdc-checkbox__checkmark {\n  position: absolute;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  left: 0;\n  width: 100%;\n  opacity: 0;\n  transition: opacity 180ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n}\n.mdc-checkbox--upgraded .mdc-checkbox__checkmark {\n  opacity: 1;\n}\n\n.mdc-checkbox__checkmark-path {\n  transition: stroke-dashoffset 180ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n  stroke: currentColor;\n  stroke-width: 3.12px;\n  stroke-dashoffset: 29.7833385;\n  stroke-dasharray: 29.7833385;\n}\n\n.mdc-checkbox__mixedmark {\n  width: 100%;\n  height: 0;\n  transform: scaleX(0) rotate(0deg);\n  border-width: 1px;\n  border-style: solid;\n  opacity: 0;\n  transition: opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1), transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n}\n\n.mdc-checkbox--upgraded .mdc-checkbox__background,\n.mdc-checkbox--upgraded .mdc-checkbox__checkmark,\n.mdc-checkbox--upgraded .mdc-checkbox__checkmark-path,\n.mdc-checkbox--upgraded .mdc-checkbox__mixedmark {\n  transition: none !important;\n}\n\n.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__background, .mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__background, .mdc-checkbox--anim-checked-unchecked .mdc-checkbox__background, .mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__background {\n  animation-duration: 180ms;\n  animation-timing-function: linear;\n}\n.mdc-checkbox--anim-unchecked-checked .mdc-checkbox__checkmark-path {\n  animation: mdc-checkbox-unchecked-checked-checkmark-path 180ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-unchecked-indeterminate .mdc-checkbox__mixedmark {\n  animation: mdc-checkbox-unchecked-indeterminate-mixedmark 90ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-checked-unchecked .mdc-checkbox__checkmark-path {\n  animation: mdc-checkbox-checked-unchecked-checkmark-path 90ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-checked-indeterminate .mdc-checkbox__checkmark {\n  animation: mdc-checkbox-checked-indeterminate-checkmark 90ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-checked-indeterminate .mdc-checkbox__mixedmark {\n  animation: mdc-checkbox-checked-indeterminate-mixedmark 90ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-indeterminate-checked .mdc-checkbox__checkmark {\n  animation: mdc-checkbox-indeterminate-checked-checkmark 500ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-indeterminate-checked .mdc-checkbox__mixedmark {\n  animation: mdc-checkbox-indeterminate-checked-mixedmark 500ms linear 0s;\n  transition: none;\n}\n.mdc-checkbox--anim-indeterminate-unchecked .mdc-checkbox__mixedmark {\n  animation: mdc-checkbox-indeterminate-unchecked-mixedmark 300ms linear 0s;\n  transition: none;\n}\n\n.mdc-checkbox__native-control:checked ~ .mdc-checkbox__background,\n.mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background {\n  transition: border-color 90ms 0ms cubic-bezier(0, 0, 0.2, 1), background-color 90ms 0ms cubic-bezier(0, 0, 0.2, 1);\n}\n.mdc-checkbox__native-control:checked ~ .mdc-checkbox__background .mdc-checkbox__checkmark-path,\n.mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background .mdc-checkbox__checkmark-path {\n  stroke-dashoffset: 0;\n}\n\n.mdc-checkbox__background::before {\n  position: absolute;\n  transform: scale(0, 0);\n  border-radius: 50%;\n  opacity: 0;\n  pointer-events: none;\n  content: \"\";\n  will-change: opacity, transform;\n  transition: opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1), transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n}\n\n.mdc-checkbox__native-control:focus ~ .mdc-checkbox__background::before {\n  transform: scale(1);\n  opacity: 0.12;\n  transition: opacity 80ms 0ms cubic-bezier(0, 0, 0.2, 1), transform 80ms 0ms cubic-bezier(0, 0, 0.2, 1);\n}\n\n.mdc-checkbox__native-control {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  margin: 0;\n  padding: 0;\n  opacity: 0;\n  cursor: inherit;\n}\n.mdc-checkbox__native-control:disabled {\n  cursor: default;\n  pointer-events: none;\n}\n\n.mdc-checkbox__native-control:checked ~ .mdc-checkbox__background .mdc-checkbox__checkmark {\n  transition: opacity 180ms 0ms cubic-bezier(0, 0, 0.2, 1), transform 180ms 0ms cubic-bezier(0, 0, 0.2, 1);\n  opacity: 1;\n}\n.mdc-checkbox__native-control:checked ~ .mdc-checkbox__background .mdc-checkbox__mixedmark {\n  transform: scaleX(1) rotate(-45deg);\n}\n\n.mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background .mdc-checkbox__checkmark {\n  transform: rotate(45deg);\n  opacity: 0;\n  transition: opacity 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1), transform 90ms 0ms cubic-bezier(0.4, 0, 0.6, 1);\n}\n.mdc-checkbox__native-control:indeterminate ~ .mdc-checkbox__background .mdc-checkbox__mixedmark {\n  transform: scaleX(1) rotate(0deg);\n  opacity: 1;\n}\n\n@keyframes mdc-ripple-fg-radius-in {\n  from {\n    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\n    transform: translate(var(--mdc-ripple-fg-translate-start, 0)) scale(1);\n  }\n  to {\n    transform: translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1));\n  }\n}\n@keyframes mdc-ripple-fg-opacity-in {\n  from {\n    animation-timing-function: linear;\n    opacity: 0;\n  }\n  to {\n    opacity: var(--mdc-ripple-fg-opacity, 0);\n  }\n}\n@keyframes mdc-ripple-fg-opacity-out {\n  from {\n    animation-timing-function: linear;\n    opacity: var(--mdc-ripple-fg-opacity, 0);\n  }\n  to {\n    opacity: 0;\n  }\n}\n.mdc-ripple-surface--test-edge-var-bug {\n  --mdc-ripple-surface-test-edge-var: 1px solid #000;\n  visibility: hidden;\n}\n.mdc-ripple-surface--test-edge-var-bug::before {\n  border: var(--mdc-ripple-surface-test-edge-var);\n}\n\n.mdc-checkbox {\n  --mdc-ripple-fg-size: 0;\n  --mdc-ripple-left: 0;\n  --mdc-ripple-top: 0;\n  --mdc-ripple-fg-scale: 1;\n  --mdc-ripple-fg-translate-end: 0;\n  --mdc-ripple-fg-translate-start: 0;\n  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);\n  padding: 11px;\n}\n.mdc-checkbox::before, .mdc-checkbox::after {\n  position: absolute;\n  border-radius: 50%;\n  opacity: 0;\n  pointer-events: none;\n  content: \"\";\n}\n.mdc-checkbox::before {\n  transition: opacity 15ms linear, background-color 15ms linear;\n  z-index: 1;\n}\n.mdc-checkbox.mdc-ripple-upgraded::before {\n  transform: scale(var(--mdc-ripple-fg-scale, 1));\n}\n.mdc-checkbox.mdc-ripple-upgraded::after {\n  top: 0;\n  /* @noflip */\n  left: 0;\n  transform: scale(0);\n  transform-origin: center center;\n}\n.mdc-checkbox.mdc-ripple-upgraded--unbounded::after {\n  top: var(--mdc-ripple-top, 0);\n  /* @noflip */\n  left: var(--mdc-ripple-left, 0);\n}\n.mdc-checkbox.mdc-ripple-upgraded--foreground-activation::after {\n  animation: mdc-ripple-fg-radius-in 225ms forwards, mdc-ripple-fg-opacity-in 75ms forwards;\n}\n.mdc-checkbox.mdc-ripple-upgraded--foreground-deactivation::after {\n  animation: mdc-ripple-fg-opacity-out 150ms;\n  transform: translate(var(--mdc-ripple-fg-translate-end, 0)) scale(var(--mdc-ripple-fg-scale, 1));\n}\n.mdc-checkbox::before, .mdc-checkbox::after {\n  background-color: #000;\n}\n@supports not (-ms-ime-align: auto) {\n  .mdc-checkbox::before, .mdc-checkbox::after {\n    /* @alternate */\n    background-color: var(--mdc-theme-on-surface, #000);\n  }\n}\n.mdc-checkbox:hover::before {\n  opacity: 0.04;\n}\n.mdc-checkbox:not(.mdc-ripple-upgraded):focus::before, .mdc-checkbox.mdc-ripple-upgraded--background-focused::before {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-checkbox:not(.mdc-ripple-upgraded)::after {\n  transition: opacity 150ms linear;\n}\n.mdc-checkbox:not(.mdc-ripple-upgraded):active::after {\n  transition-duration: 75ms;\n  opacity: 0.12;\n}\n.mdc-checkbox.mdc-ripple-upgraded {\n  --mdc-ripple-fg-opacity: 0.12;\n}\n.mdc-checkbox::before, .mdc-checkbox::after {\n  top: calc(50% - 50%);\n  /* @noflip */\n  left: calc(50% - 50%);\n  width: 100%;\n  height: 100%;\n}\n.mdc-checkbox.mdc-ripple-upgraded::before, .mdc-checkbox.mdc-ripple-upgraded::after {\n  top: var(--mdc-ripple-top, calc(50% - 50%));\n  /* @noflip */\n  left: var(--mdc-ripple-left, calc(50% - 50%));\n  width: var(--mdc-ripple-fg-size, 100%);\n  height: var(--mdc-ripple-fg-size, 100%);\n}\n.mdc-checkbox.mdc-ripple-upgraded::after {\n  width: var(--mdc-ripple-fg-size, 100%);\n  height: var(--mdc-ripple-fg-size, 100%);\n}\n.mdc-checkbox .mdc-checkbox__background {\n  /* @noflip */\n  left: 11px;\n  /* @noflip */\n  right: initial;\n  top: 11px;\n}\n.mdc-checkbox[dir=rtl] .mdc-checkbox .mdc-checkbox__background, [dir=rtl] .mdc-checkbox .mdc-checkbox .mdc-checkbox__background {\n  /* @noflip */\n  left: initial;\n  /* @noflip */\n  right: 11px;\n}\n\n.mdc-checkbox .mdc-checkbox__background::before {\n  top: -13px;\n  left: -13px;\n  width: 40px;\n  height: 40px;\n}\n\n.mdc-ripple-upgraded--background-focused .mdc-checkbox__background::before {\n  content: none;\n}\n";
     styleInject(css_248z);
 
-    /* node_modules/@smui/common/A.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/common/A.svelte generated by Svelte v3.29.0 */
     const file$6 = "node_modules/@smui/common/A.svelte";
 
     function create_fragment$8(ctx) {
@@ -5989,7 +5901,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[5].default;
+    	const default_slot_template = /*#slots*/ ctx[5].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[4], null);
     	let a_levels = [{ href: /*href*/ ctx[1] }, exclude(/*$$props*/ ctx[3], ["use", "href"])];
     	let a_data = {};
@@ -6069,11 +5981,11 @@ var app = (function (L) {
     }
 
     function instance$8($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("A", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { href = "javascript:void(0);" } = $$props;
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("A", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(3, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -6103,7 +6015,7 @@ var app = (function (L) {
     	}
 
     	$$props = exclude_internal_props($$props);
-    	return [use, href, forwardEvents, $$props, $$scope, $$slots];
+    	return [use, href, forwardEvents, $$props, $$scope, slots];
     }
 
     class A extends SvelteComponentDev {
@@ -6136,7 +6048,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/common/Button.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/common/Button.svelte generated by Svelte v3.29.0 */
     const file$7 = "node_modules/@smui/common/Button.svelte";
 
     function create_fragment$9(ctx) {
@@ -6146,7 +6058,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[4].default;
+    	const default_slot_template = /*#slots*/ ctx[4].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[3], null);
     	let button_levels = [exclude(/*$$props*/ ctx[2], ["use"])];
     	let button_data = {};
@@ -6222,10 +6134,10 @@ var app = (function (L) {
     }
 
     function instance$9($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Button", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Button", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(2, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -6252,7 +6164,7 @@ var app = (function (L) {
     	}
 
     	$$props = exclude_internal_props($$props);
-    	return [use, forwardEvents, $$props, $$scope, $$slots];
+    	return [use, forwardEvents, $$props, $$scope, slots];
     }
 
     class Button extends SvelteComponentDev {
@@ -6385,12 +6297,12 @@ var app = (function (L) {
       }
     }
 
-    /* node_modules/@smui/button/Button.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/button/Button.svelte generated by Svelte v3.29.0 */
 
     // (1:0) <svelte:component   this={component}   use={[[Ripple, {ripple, unbounded: false, classForward: classes => rippleClasses = classes}], forwardEvents, ...use]}   class="     mdc-button     {className}     {rippleClasses.join(' ')}     {variant === 'raised' ? 'mdc-button--raised' : ''}     {variant === 'unelevated' ? 'mdc-button--unelevated' : ''}     {variant === 'outlined' ? 'mdc-button--outlined' : ''}     {dense ? 'mdc-button--dense' : ''}     {color === 'secondary' ? 'smui-button--color-secondary' : ''}     {context === 'card:action' ? 'mdc-card__action' : ''}     {context === 'card:action' ? 'mdc-card__action--button' : ''}     {context === 'dialog:action' ? 'mdc-dialog__button' : ''}     {context === 'top-app-bar:navigation' ? 'mdc-top-app-bar__navigation-icon' : ''}     {context === 'top-app-bar:action' ? 'mdc-top-app-bar__action-item' : ''}     {context === 'snackbar' ? 'mdc-snackbar__action' : ''}   "   {...actionProp}   {...defaultProp}   {...exclude($$props, ['use', 'class', 'ripple', 'color', 'variant', 'dense', ...dialogExcludes])} >
     function create_default_slot(ctx) {
     	let current;
-    	const default_slot_template = /*$$slots*/ ctx[17].default;
+    	const default_slot_template = /*#slots*/ ctx[17].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[19], null);
 
     	const block = {
@@ -6639,6 +6551,8 @@ var app = (function (L) {
     }
 
     function instance$a($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Button", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { class: className = "" } = $$props;
@@ -6654,8 +6568,6 @@ var app = (function (L) {
     	let rippleClasses = [];
     	setContext("SMUI:label:context", "button");
     	setContext("SMUI:icon:context", "button");
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Button", $$slots, ['default']);
     	const func = classes => $$invalidate(7, rippleClasses = classes);
 
     	$$self.$$set = $$new_props => {
@@ -6763,7 +6675,7 @@ var app = (function (L) {
     		href,
     		action,
     		defaultAction,
-    		$$slots,
+    		slots,
     		func,
     		$$scope
     	];
@@ -6875,7 +6787,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/common/Label.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/common/Label.svelte generated by Svelte v3.29.0 */
     const file$8 = "node_modules/@smui/common/Label.svelte";
 
     function create_fragment$b(ctx) {
@@ -6886,7 +6798,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[6].default;
+    	const default_slot_template = /*#slots*/ ctx[6].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[5], null);
 
     	let span_levels = [
@@ -6995,12 +6907,12 @@ var app = (function (L) {
     }
 
     function instance$b($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Label", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { class: className = "" } = $$props;
     	const context = getContext("SMUI:label:context");
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Label", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(4, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -7032,7 +6944,7 @@ var app = (function (L) {
     	}
 
     	$$props = exclude_internal_props($$props);
-    	return [use, className, forwardEvents, context, $$props, $$scope, $$slots];
+    	return [use, className, forwardEvents, context, $$props, $$scope, slots];
     }
 
     class Label extends SvelteComponentDev {
@@ -7065,7 +6977,7 @@ var app = (function (L) {
     	}
     }
 
-    /* node_modules/@smui/common/Icon.svelte generated by Svelte v3.24.1 */
+    /* node_modules/@smui/common/Icon.svelte generated by Svelte v3.29.0 */
     const file$9 = "node_modules/@smui/common/Icon.svelte";
 
     function create_fragment$c(ctx) {
@@ -7076,7 +6988,7 @@ var app = (function (L) {
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[10].default;
+    	const default_slot_template = /*#slots*/ ctx[10].default;
     	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[9], null);
 
     	let i_levels = [
@@ -7189,6 +7101,8 @@ var app = (function (L) {
     }
 
     function instance$c($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Icon", slots, ['default']);
     	const forwardEvents = forwardEventsBuilder(get_current_component());
     	let { use = [] } = $$props;
     	let { class: className = "" } = $$props;
@@ -7197,8 +7111,6 @@ var app = (function (L) {
     	let { leadingHidden = false } = $$props;
     	let { trailing = false } = $$props;
     	const context = getContext("SMUI:icon:context");
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Icon", $$slots, ['default']);
 
     	$$self.$$set = $$new_props => {
     		$$invalidate(8, $$props = assign(assign({}, $$props), exclude_internal_props($$new_props)));
@@ -7254,7 +7166,7 @@ var app = (function (L) {
     		context,
     		$$props,
     		$$scope,
-    		$$slots
+    		slots
     	];
     }
 
@@ -7358,7 +7270,7 @@ var app = (function (L) {
 
     async function agregarDispositivo(datos) {
         let respuesta = await fetch(BASE_URL, {
-            method: 'POST',
+            method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(datos)
         });
@@ -7379,22 +7291,25 @@ var app = (function (L) {
     }
 
 
-    async function modificarDispositivo (datos) {
-        let respuesta = await fetch(BASE_URL, {
-            method: 'POST',
+    async function modificarDispositivo (id, datos) {
+        console.log(datos + id);
+        let respuesta = await fetch(`${BASE_URL}/${id}`, {
+            method: "PUT",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(datos)
         });
+        console.log(respuesta);
 
         if (respuesta.status !== 200) {
             throw new Error(`Estado HTTP ${respuesta.status}`);
         }
+        
     }
 
 
     const dispositivosServicio = { listarDispositivos, obtenerDispositivo, modificarDispositivo, agregarDispositivo, eliminarDispositivo };
 
-    /* src/componentes/ListadoDispositivos.svelte generated by Svelte v3.24.1 */
+    /* src/componentes/ListadoDispositivos.svelte generated by Svelte v3.29.0 */
     const file$a = "src/componentes/ListadoDispositivos.svelte";
 
     function get_each_context(ctx, list, i) {
@@ -8856,6 +8771,8 @@ var app = (function (L) {
     }
 
     function instance$d($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("ListadoDispositivos", slots, []);
     	let dispositivos = [];
     	let id;
 
@@ -8874,8 +8791,6 @@ var app = (function (L) {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<ListadoDispositivos> was created with unknown prop '${key}'`);
     	});
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("ListadoDispositivos", $$slots, []);
     	const click_handler = dispositivo => eliminar(dispositivo.id);
 
     	$$self.$capture_state = () => ({
@@ -8920,6 +8835,99 @@ var app = (function (L) {
     	}
     }
 
+    const BASE_URL$1 = "http://localhost:3001/api/v1/series/";
+
+
+    async function obtenerDatos(id) {
+        let respuesta = await fetch(`${BASE_URL$1}/${id}`, {
+            method: 'GET',
+        });
+
+        if (respuesta.status !== 200) {
+            throw new Error(`Estado HTTP ${respuesta.status}`);
+        }
+        return respuesta;
+    }
+
+    const seriesServicio = { obtenerDatos };
+
+    function _extends() {
+      _extends = Object.assign || function (target) {
+        for (var i = 1; i < arguments.length; i++) {
+          var source = arguments[i];
+
+          for (var key in source) {
+            if (Object.prototype.hasOwnProperty.call(source, key)) {
+              target[key] = source[key];
+            }
+          }
+        }
+
+        return target;
+      };
+
+      return _extends.apply(this, arguments);
+    }
+
+    function _defineProperties(target, props) {
+      for (var i = 0; i < props.length; i++) {
+        var descriptor = props[i];
+        descriptor.enumerable = descriptor.enumerable || false;
+        descriptor.configurable = true;
+        if ("value" in descriptor) descriptor.writable = true;
+        Object.defineProperty(target, descriptor.key, descriptor);
+      }
+    }
+
+    function _createClass(Constructor, protoProps, staticProps) {
+      if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) _defineProperties(Constructor, staticProps);
+      return Constructor;
+    }
+
+    /** Used for built-in method references. */
+    var objectProto = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$1 = objectProto.hasOwnProperty;
+
+    /**
+     * The base implementation of `_.has` without support for deep paths.
+     *
+     * @private
+     * @param {Object} [object] The object to query.
+     * @param {Array|string} key The key to check.
+     * @returns {boolean} Returns `true` if `key` exists, else `false`.
+     */
+    function baseHas(object, key) {
+      return object != null && hasOwnProperty$1.call(object, key);
+    }
+
+    /**
+     * Checks if `value` is classified as an `Array` object.
+     *
+     * @static
+     * @memberOf _
+     * @since 0.1.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is an array, else `false`.
+     * @example
+     *
+     * _.isArray([1, 2, 3]);
+     * // => true
+     *
+     * _.isArray(document.body.children);
+     * // => false
+     *
+     * _.isArray('abc');
+     * // => false
+     *
+     * _.isArray(_.noop);
+     * // => false
+     */
+    var isArray = Array.isArray;
+
     /** Detect free variable `global` from Node.js. */
     var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
 
@@ -8933,17 +8941,17 @@ var app = (function (L) {
     var Symbol$1 = root.Symbol;
 
     /** Used for built-in method references. */
-    var objectProto = Object.prototype;
+    var objectProto$1 = Object.prototype;
 
     /** Used to check objects for own properties. */
-    var hasOwnProperty$1 = objectProto.hasOwnProperty;
+    var hasOwnProperty$2 = objectProto$1.hasOwnProperty;
 
     /**
      * Used to resolve the
      * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
      * of values.
      */
-    var nativeObjectToString = objectProto.toString;
+    var nativeObjectToString = objectProto$1.toString;
 
     /** Built-in value references. */
     var symToStringTag = Symbol$1 ? Symbol$1.toStringTag : undefined;
@@ -8956,7 +8964,7 @@ var app = (function (L) {
      * @returns {string} Returns the raw `toStringTag`.
      */
     function getRawTag(value) {
-      var isOwn = hasOwnProperty$1.call(value, symToStringTag),
+      var isOwn = hasOwnProperty$2.call(value, symToStringTag),
           tag = value[symToStringTag];
 
       try {
@@ -8976,14 +8984,14 @@ var app = (function (L) {
     }
 
     /** Used for built-in method references. */
-    var objectProto$1 = Object.prototype;
+    var objectProto$2 = Object.prototype;
 
     /**
      * Used to resolve the
      * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
      * of values.
      */
-    var nativeObjectToString$1 = objectProto$1.toString;
+    var nativeObjectToString$1 = objectProto$2.toString;
 
     /**
      * Converts `value` to a string using `Object.prototype.toString`.
@@ -9017,6 +9025,84 @@ var app = (function (L) {
       return (symToStringTag$1 && symToStringTag$1 in Object(value))
         ? getRawTag(value)
         : objectToString(value);
+    }
+
+    /**
+     * Checks if `value` is object-like. A value is object-like if it's not `null`
+     * and has a `typeof` result of "object".
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+     * @example
+     *
+     * _.isObjectLike({});
+     * // => true
+     *
+     * _.isObjectLike([1, 2, 3]);
+     * // => true
+     *
+     * _.isObjectLike(_.noop);
+     * // => false
+     *
+     * _.isObjectLike(null);
+     * // => false
+     */
+    function isObjectLike(value) {
+      return value != null && typeof value == 'object';
+    }
+
+    /** `Object#toString` result references. */
+    var symbolTag = '[object Symbol]';
+
+    /**
+     * Checks if `value` is classified as a `Symbol` primitive or object.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+     * @example
+     *
+     * _.isSymbol(Symbol.iterator);
+     * // => true
+     *
+     * _.isSymbol('abc');
+     * // => false
+     */
+    function isSymbol(value) {
+      return typeof value == 'symbol' ||
+        (isObjectLike(value) && baseGetTag(value) == symbolTag);
+    }
+
+    /** Used to match property names within property paths. */
+    var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
+        reIsPlainProp = /^\w*$/;
+
+    /**
+     * Checks if `value` is a property name and not a property path.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @param {Object} [object] The object to query keys on.
+     * @returns {boolean} Returns `true` if `value` is a property name, else `false`.
+     */
+    function isKey(value, object) {
+      if (isArray(value)) {
+        return false;
+      }
+      var type = typeof value;
+      if (type == 'number' || type == 'symbol' || type == 'boolean' ||
+          value == null || isSymbol(value)) {
+        return true;
+      }
+      return reIsPlainProp.test(value) || !reIsDeepProp.test(value) ||
+        (object != null && value in Object(object));
     }
 
     /**
@@ -9138,17 +9224,17 @@ var app = (function (L) {
 
     /** Used for built-in method references. */
     var funcProto$1 = Function.prototype,
-        objectProto$2 = Object.prototype;
+        objectProto$3 = Object.prototype;
 
     /** Used to resolve the decompiled source of functions. */
     var funcToString$1 = funcProto$1.toString;
 
     /** Used to check objects for own properties. */
-    var hasOwnProperty$2 = objectProto$2.hasOwnProperty;
+    var hasOwnProperty$3 = objectProto$3.hasOwnProperty;
 
     /** Used to detect if a method is native. */
     var reIsNative = RegExp('^' +
-      funcToString$1.call(hasOwnProperty$2).replace(reRegExpChar, '\\$&')
+      funcToString$1.call(hasOwnProperty$3).replace(reRegExpChar, '\\$&')
       .replace(/hasOwnProperty|(function).*?(?=\\\()| for .+?(?=\\\])/g, '$1.*?') + '$'
     );
 
@@ -9191,199 +9277,6 @@ var app = (function (L) {
     function getNative(object, key) {
       var value = getValue(object, key);
       return baseIsNative(value) ? value : undefined;
-    }
-
-    var defineProperty = (function() {
-      try {
-        var func = getNative(Object, 'defineProperty');
-        func({}, '', {});
-        return func;
-      } catch (e) {}
-    }());
-
-    /**
-     * The base implementation of `assignValue` and `assignMergeValue` without
-     * value checks.
-     *
-     * @private
-     * @param {Object} object The object to modify.
-     * @param {string} key The key of the property to assign.
-     * @param {*} value The value to assign.
-     */
-    function baseAssignValue(object, key, value) {
-      if (key == '__proto__' && defineProperty) {
-        defineProperty(object, key, {
-          'configurable': true,
-          'enumerable': true,
-          'value': value,
-          'writable': true
-        });
-      } else {
-        object[key] = value;
-      }
-    }
-
-    /**
-     * Performs a
-     * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
-     * comparison between two values to determine if they are equivalent.
-     *
-     * @static
-     * @memberOf _
-     * @since 4.0.0
-     * @category Lang
-     * @param {*} value The value to compare.
-     * @param {*} other The other value to compare.
-     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
-     * @example
-     *
-     * var object = { 'a': 1 };
-     * var other = { 'a': 1 };
-     *
-     * _.eq(object, object);
-     * // => true
-     *
-     * _.eq(object, other);
-     * // => false
-     *
-     * _.eq('a', 'a');
-     * // => true
-     *
-     * _.eq('a', Object('a'));
-     * // => false
-     *
-     * _.eq(NaN, NaN);
-     * // => true
-     */
-    function eq(value, other) {
-      return value === other || (value !== value && other !== other);
-    }
-
-    /** Used for built-in method references. */
-    var objectProto$3 = Object.prototype;
-
-    /** Used to check objects for own properties. */
-    var hasOwnProperty$3 = objectProto$3.hasOwnProperty;
-
-    /**
-     * Assigns `value` to `key` of `object` if the existing value is not equivalent
-     * using [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
-     * for equality comparisons.
-     *
-     * @private
-     * @param {Object} object The object to modify.
-     * @param {string} key The key of the property to assign.
-     * @param {*} value The value to assign.
-     */
-    function assignValue(object, key, value) {
-      var objValue = object[key];
-      if (!(hasOwnProperty$3.call(object, key) && eq(objValue, value)) ||
-          (value === undefined && !(key in object))) {
-        baseAssignValue(object, key, value);
-      }
-    }
-
-    /**
-     * Checks if `value` is classified as an `Array` object.
-     *
-     * @static
-     * @memberOf _
-     * @since 0.1.0
-     * @category Lang
-     * @param {*} value The value to check.
-     * @returns {boolean} Returns `true` if `value` is an array, else `false`.
-     * @example
-     *
-     * _.isArray([1, 2, 3]);
-     * // => true
-     *
-     * _.isArray(document.body.children);
-     * // => false
-     *
-     * _.isArray('abc');
-     * // => false
-     *
-     * _.isArray(_.noop);
-     * // => false
-     */
-    var isArray = Array.isArray;
-
-    /**
-     * Checks if `value` is object-like. A value is object-like if it's not `null`
-     * and has a `typeof` result of "object".
-     *
-     * @static
-     * @memberOf _
-     * @since 4.0.0
-     * @category Lang
-     * @param {*} value The value to check.
-     * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
-     * @example
-     *
-     * _.isObjectLike({});
-     * // => true
-     *
-     * _.isObjectLike([1, 2, 3]);
-     * // => true
-     *
-     * _.isObjectLike(_.noop);
-     * // => false
-     *
-     * _.isObjectLike(null);
-     * // => false
-     */
-    function isObjectLike(value) {
-      return value != null && typeof value == 'object';
-    }
-
-    /** `Object#toString` result references. */
-    var symbolTag = '[object Symbol]';
-
-    /**
-     * Checks if `value` is classified as a `Symbol` primitive or object.
-     *
-     * @static
-     * @memberOf _
-     * @since 4.0.0
-     * @category Lang
-     * @param {*} value The value to check.
-     * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
-     * @example
-     *
-     * _.isSymbol(Symbol.iterator);
-     * // => true
-     *
-     * _.isSymbol('abc');
-     * // => false
-     */
-    function isSymbol(value) {
-      return typeof value == 'symbol' ||
-        (isObjectLike(value) && baseGetTag(value) == symbolTag);
-    }
-
-    /** Used to match property names within property paths. */
-    var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
-        reIsPlainProp = /^\w*$/;
-
-    /**
-     * Checks if `value` is a property name and not a property path.
-     *
-     * @private
-     * @param {*} value The value to check.
-     * @param {Object} [object] The object to query keys on.
-     * @returns {boolean} Returns `true` if `value` is a property name, else `false`.
-     */
-    function isKey(value, object) {
-      if (isArray(value)) {
-        return false;
-      }
-      var type = typeof value;
-      if (type == 'number' || type == 'symbol' || type == 'boolean' ||
-          value == null || isSymbol(value)) {
-        return true;
-      }
-      return reIsPlainProp.test(value) || !reIsDeepProp.test(value) ||
-        (object != null && value in Object(object));
     }
 
     /* Built-in method references that are verified to be native. */
@@ -9519,6 +9412,42 @@ var app = (function (L) {
     function listCacheClear() {
       this.__data__ = [];
       this.size = 0;
+    }
+
+    /**
+     * Performs a
+     * [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+     * comparison between two values to determine if they are equivalent.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+     * @example
+     *
+     * var object = { 'a': 1 };
+     * var other = { 'a': 1 };
+     *
+     * _.eq(object, object);
+     * // => true
+     *
+     * _.eq(object, other);
+     * // => false
+     *
+     * _.eq('a', 'a');
+     * // => true
+     *
+     * _.eq('a', Object('a'));
+     * // => false
+     *
+     * _.eq(NaN, NaN);
+     * // => true
+     */
+    function eq(value, other) {
+      return value === other || (value !== value && other !== other);
     }
 
     /**
@@ -9989,6 +9918,52 @@ var app = (function (L) {
       return isKey(value, object) ? [value] : stringToPath(toString(value));
     }
 
+    /** `Object#toString` result references. */
+    var argsTag = '[object Arguments]';
+
+    /**
+     * The base implementation of `_.isArguments`.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is an `arguments` object,
+     */
+    function baseIsArguments(value) {
+      return isObjectLike(value) && baseGetTag(value) == argsTag;
+    }
+
+    /** Used for built-in method references. */
+    var objectProto$6 = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$6 = objectProto$6.hasOwnProperty;
+
+    /** Built-in value references. */
+    var propertyIsEnumerable = objectProto$6.propertyIsEnumerable;
+
+    /**
+     * Checks if `value` is likely an `arguments` object.
+     *
+     * @static
+     * @memberOf _
+     * @since 0.1.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is an `arguments` object,
+     *  else `false`.
+     * @example
+     *
+     * _.isArguments(function() { return arguments; }());
+     * // => true
+     *
+     * _.isArguments([1, 2, 3]);
+     * // => false
+     */
+    var isArguments = baseIsArguments(function() { return arguments; }()) ? baseIsArguments : function(value) {
+      return isObjectLike(value) && hasOwnProperty$6.call(value, 'callee') &&
+        !propertyIsEnumerable.call(value, 'callee');
+    };
+
     /** Used as references for various `Number` constants. */
     var MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -10014,6 +9989,40 @@ var app = (function (L) {
     }
 
     /** Used as references for various `Number` constants. */
+    var MAX_SAFE_INTEGER$1 = 9007199254740991;
+
+    /**
+     * Checks if `value` is a valid array-like length.
+     *
+     * **Note:** This method is loosely based on
+     * [`ToLength`](http://ecma-international.org/ecma-262/7.0/#sec-tolength).
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a valid length, else `false`.
+     * @example
+     *
+     * _.isLength(3);
+     * // => true
+     *
+     * _.isLength(Number.MIN_VALUE);
+     * // => false
+     *
+     * _.isLength(Infinity);
+     * // => false
+     *
+     * _.isLength('3');
+     * // => false
+     */
+    function isLength(value) {
+      return typeof value == 'number' &&
+        value > -1 && value % 1 == 0 && value <= MAX_SAFE_INTEGER$1;
+    }
+
+    /** Used as references for various `Number` constants. */
     var INFINITY$1 = 1 / 0;
 
     /**
@@ -10032,75 +10041,3163 @@ var app = (function (L) {
     }
 
     /**
-     * The base implementation of `_.set`.
+     * Checks if `path` exists on `object`.
      *
      * @private
-     * @param {Object} object The object to modify.
-     * @param {Array|string} path The path of the property to set.
-     * @param {*} value The value to set.
-     * @param {Function} [customizer] The function to customize path creation.
-     * @returns {Object} Returns `object`.
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path to check.
+     * @param {Function} hasFunc The function to check properties.
+     * @returns {boolean} Returns `true` if `path` exists, else `false`.
      */
-    function baseSet(object, path, value, customizer) {
-      if (!isObject(object)) {
-        return object;
-      }
+    function hasPath(object, path, hasFunc) {
       path = castPath(path, object);
 
       var index = -1,
           length = path.length,
-          lastIndex = length - 1,
-          nested = object;
+          result = false;
 
-      while (nested != null && ++index < length) {
-        var key = toKey(path[index]),
-            newValue = value;
-
-        if (index != lastIndex) {
-          var objValue = nested[key];
-          newValue = customizer ? customizer(objValue, key, nested) : undefined;
-          if (newValue === undefined) {
-            newValue = isObject(objValue)
-              ? objValue
-              : (isIndex(path[index + 1]) ? [] : {});
-          }
+      while (++index < length) {
+        var key = toKey(path[index]);
+        if (!(result = object != null && hasFunc(object, key))) {
+          break;
         }
-        assignValue(nested, key, newValue);
-        nested = nested[key];
+        object = object[key];
+      }
+      if (result || ++index != length) {
+        return result;
+      }
+      length = object == null ? 0 : object.length;
+      return !!length && isLength(length) && isIndex(key, length) &&
+        (isArray(object) || isArguments(object));
+    }
+
+    /**
+     * Checks if `path` is a direct property of `object`.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path to check.
+     * @returns {boolean} Returns `true` if `path` exists, else `false`.
+     * @example
+     *
+     * var object = { 'a': { 'b': 2 } };
+     * var other = _.create({ 'a': _.create({ 'b': 2 }) });
+     *
+     * _.has(object, 'a');
+     * // => true
+     *
+     * _.has(object, 'a.b');
+     * // => true
+     *
+     * _.has(object, ['a', 'b']);
+     * // => true
+     *
+     * _.has(other, 'a');
+     * // => false
+     */
+    function has(object, path) {
+      return object != null && hasPath(object, path, baseHas);
+    }
+
+    /**
+     * Removes all key-value entries from the stack.
+     *
+     * @private
+     * @name clear
+     * @memberOf Stack
+     */
+    function stackClear() {
+      this.__data__ = new ListCache;
+      this.size = 0;
+    }
+
+    /**
+     * Removes `key` and its value from the stack.
+     *
+     * @private
+     * @name delete
+     * @memberOf Stack
+     * @param {string} key The key of the value to remove.
+     * @returns {boolean} Returns `true` if the entry was removed, else `false`.
+     */
+    function stackDelete(key) {
+      var data = this.__data__,
+          result = data['delete'](key);
+
+      this.size = data.size;
+      return result;
+    }
+
+    /**
+     * Gets the stack value for `key`.
+     *
+     * @private
+     * @name get
+     * @memberOf Stack
+     * @param {string} key The key of the value to get.
+     * @returns {*} Returns the entry value.
+     */
+    function stackGet(key) {
+      return this.__data__.get(key);
+    }
+
+    /**
+     * Checks if a stack value for `key` exists.
+     *
+     * @private
+     * @name has
+     * @memberOf Stack
+     * @param {string} key The key of the entry to check.
+     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+     */
+    function stackHas(key) {
+      return this.__data__.has(key);
+    }
+
+    /** Used as the size to enable large array optimizations. */
+    var LARGE_ARRAY_SIZE = 200;
+
+    /**
+     * Sets the stack `key` to `value`.
+     *
+     * @private
+     * @name set
+     * @memberOf Stack
+     * @param {string} key The key of the value to set.
+     * @param {*} value The value to set.
+     * @returns {Object} Returns the stack cache instance.
+     */
+    function stackSet(key, value) {
+      var data = this.__data__;
+      if (data instanceof ListCache) {
+        var pairs = data.__data__;
+        if (!Map$1 || (pairs.length < LARGE_ARRAY_SIZE - 1)) {
+          pairs.push([key, value]);
+          this.size = ++data.size;
+          return this;
+        }
+        data = this.__data__ = new MapCache(pairs);
+      }
+      data.set(key, value);
+      this.size = data.size;
+      return this;
+    }
+
+    /**
+     * Creates a stack cache object to store key-value pairs.
+     *
+     * @private
+     * @constructor
+     * @param {Array} [entries] The key-value pairs to cache.
+     */
+    function Stack(entries) {
+      var data = this.__data__ = new ListCache(entries);
+      this.size = data.size;
+    }
+
+    // Add methods to `Stack`.
+    Stack.prototype.clear = stackClear;
+    Stack.prototype['delete'] = stackDelete;
+    Stack.prototype.get = stackGet;
+    Stack.prototype.has = stackHas;
+    Stack.prototype.set = stackSet;
+
+    /**
+     * A specialized version of `_.forEach` for arrays without support for
+     * iteratee shorthands.
+     *
+     * @private
+     * @param {Array} [array] The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayEach(array, iteratee) {
+      var index = -1,
+          length = array == null ? 0 : array.length;
+
+      while (++index < length) {
+        if (iteratee(array[index], index, array) === false) {
+          break;
+        }
+      }
+      return array;
+    }
+
+    var defineProperty = (function() {
+      try {
+        var func = getNative(Object, 'defineProperty');
+        func({}, '', {});
+        return func;
+      } catch (e) {}
+    }());
+
+    /**
+     * The base implementation of `assignValue` and `assignMergeValue` without
+     * value checks.
+     *
+     * @private
+     * @param {Object} object The object to modify.
+     * @param {string} key The key of the property to assign.
+     * @param {*} value The value to assign.
+     */
+    function baseAssignValue(object, key, value) {
+      if (key == '__proto__' && defineProperty) {
+        defineProperty(object, key, {
+          'configurable': true,
+          'enumerable': true,
+          'value': value,
+          'writable': true
+        });
+      } else {
+        object[key] = value;
+      }
+    }
+
+    /** Used for built-in method references. */
+    var objectProto$7 = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$7 = objectProto$7.hasOwnProperty;
+
+    /**
+     * Assigns `value` to `key` of `object` if the existing value is not equivalent
+     * using [`SameValueZero`](http://ecma-international.org/ecma-262/7.0/#sec-samevaluezero)
+     * for equality comparisons.
+     *
+     * @private
+     * @param {Object} object The object to modify.
+     * @param {string} key The key of the property to assign.
+     * @param {*} value The value to assign.
+     */
+    function assignValue(object, key, value) {
+      var objValue = object[key];
+      if (!(hasOwnProperty$7.call(object, key) && eq(objValue, value)) ||
+          (value === undefined && !(key in object))) {
+        baseAssignValue(object, key, value);
+      }
+    }
+
+    /**
+     * Copies properties of `source` to `object`.
+     *
+     * @private
+     * @param {Object} source The object to copy properties from.
+     * @param {Array} props The property identifiers to copy.
+     * @param {Object} [object={}] The object to copy properties to.
+     * @param {Function} [customizer] The function to customize copied values.
+     * @returns {Object} Returns `object`.
+     */
+    function copyObject(source, props, object, customizer) {
+      var isNew = !object;
+      object || (object = {});
+
+      var index = -1,
+          length = props.length;
+
+      while (++index < length) {
+        var key = props[index];
+
+        var newValue = customizer
+          ? customizer(object[key], source[key], key, object, source)
+          : undefined;
+
+        if (newValue === undefined) {
+          newValue = source[key];
+        }
+        if (isNew) {
+          baseAssignValue(object, key, newValue);
+        } else {
+          assignValue(object, key, newValue);
+        }
       }
       return object;
     }
 
     /**
-     * Sets the value at `path` of `object`. If a portion of `path` doesn't exist,
-     * it's created. Arrays are created for missing index properties while objects
-     * are created for all other missing properties. Use `_.setWith` to customize
-     * `path` creation.
+     * The base implementation of `_.times` without support for iteratee shorthands
+     * or max array length checks.
      *
-     * **Note:** This method mutates `object`.
+     * @private
+     * @param {number} n The number of times to invoke `iteratee`.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Array} Returns the array of results.
+     */
+    function baseTimes(n, iteratee) {
+      var index = -1,
+          result = Array(n);
+
+      while (++index < n) {
+        result[index] = iteratee(index);
+      }
+      return result;
+    }
+
+    /**
+     * This method returns `false`.
      *
      * @static
      * @memberOf _
-     * @since 3.7.0
-     * @category Object
-     * @param {Object} object The object to modify.
-     * @param {Array|string} path The path of the property to set.
-     * @param {*} value The value to set.
-     * @returns {Object} Returns `object`.
+     * @since 4.13.0
+     * @category Util
+     * @returns {boolean} Returns `false`.
      * @example
      *
-     * var object = { 'a': [{ 'b': { 'c': 3 } }] };
-     *
-     * _.set(object, 'a[0].b.c', 4);
-     * console.log(object.a[0].b.c);
-     * // => 4
-     *
-     * _.set(object, ['x', '0', 'y', 'z'], 5);
-     * console.log(object.x[0].y.z);
-     * // => 5
+     * _.times(2, _.stubFalse);
+     * // => [false, false]
      */
-    function set(object, path, value) {
-      return object == null ? object : baseSet(object, path, value);
+    function stubFalse() {
+      return false;
+    }
+
+    /** Detect free variable `exports`. */
+    var freeExports = typeof exports == 'object' && exports && !exports.nodeType && exports;
+
+    /** Detect free variable `module`. */
+    var freeModule = freeExports && typeof module == 'object' && module && !module.nodeType && module;
+
+    /** Detect the popular CommonJS extension `module.exports`. */
+    var moduleExports = freeModule && freeModule.exports === freeExports;
+
+    /** Built-in value references. */
+    var Buffer = moduleExports ? root.Buffer : undefined;
+
+    /* Built-in method references for those with the same name as other `lodash` methods. */
+    var nativeIsBuffer = Buffer ? Buffer.isBuffer : undefined;
+
+    /**
+     * Checks if `value` is a buffer.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.3.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a buffer, else `false`.
+     * @example
+     *
+     * _.isBuffer(new Buffer(2));
+     * // => true
+     *
+     * _.isBuffer(new Uint8Array(2));
+     * // => false
+     */
+    var isBuffer = nativeIsBuffer || stubFalse;
+
+    /** `Object#toString` result references. */
+    var argsTag$1 = '[object Arguments]',
+        arrayTag = '[object Array]',
+        boolTag = '[object Boolean]',
+        dateTag = '[object Date]',
+        errorTag = '[object Error]',
+        funcTag$1 = '[object Function]',
+        mapTag = '[object Map]',
+        numberTag = '[object Number]',
+        objectTag = '[object Object]',
+        regexpTag = '[object RegExp]',
+        setTag = '[object Set]',
+        stringTag = '[object String]',
+        weakMapTag = '[object WeakMap]';
+
+    var arrayBufferTag = '[object ArrayBuffer]',
+        dataViewTag = '[object DataView]',
+        float32Tag = '[object Float32Array]',
+        float64Tag = '[object Float64Array]',
+        int8Tag = '[object Int8Array]',
+        int16Tag = '[object Int16Array]',
+        int32Tag = '[object Int32Array]',
+        uint8Tag = '[object Uint8Array]',
+        uint8ClampedTag = '[object Uint8ClampedArray]',
+        uint16Tag = '[object Uint16Array]',
+        uint32Tag = '[object Uint32Array]';
+
+    /** Used to identify `toStringTag` values of typed arrays. */
+    var typedArrayTags = {};
+    typedArrayTags[float32Tag] = typedArrayTags[float64Tag] =
+    typedArrayTags[int8Tag] = typedArrayTags[int16Tag] =
+    typedArrayTags[int32Tag] = typedArrayTags[uint8Tag] =
+    typedArrayTags[uint8ClampedTag] = typedArrayTags[uint16Tag] =
+    typedArrayTags[uint32Tag] = true;
+    typedArrayTags[argsTag$1] = typedArrayTags[arrayTag] =
+    typedArrayTags[arrayBufferTag] = typedArrayTags[boolTag] =
+    typedArrayTags[dataViewTag] = typedArrayTags[dateTag] =
+    typedArrayTags[errorTag] = typedArrayTags[funcTag$1] =
+    typedArrayTags[mapTag] = typedArrayTags[numberTag] =
+    typedArrayTags[objectTag] = typedArrayTags[regexpTag] =
+    typedArrayTags[setTag] = typedArrayTags[stringTag] =
+    typedArrayTags[weakMapTag] = false;
+
+    /**
+     * The base implementation of `_.isTypedArray` without Node.js optimizations.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a typed array, else `false`.
+     */
+    function baseIsTypedArray(value) {
+      return isObjectLike(value) &&
+        isLength(value.length) && !!typedArrayTags[baseGetTag(value)];
+    }
+
+    /**
+     * The base implementation of `_.unary` without support for storing metadata.
+     *
+     * @private
+     * @param {Function} func The function to cap arguments for.
+     * @returns {Function} Returns the new capped function.
+     */
+    function baseUnary(func) {
+      return function(value) {
+        return func(value);
+      };
+    }
+
+    /** Detect free variable `exports`. */
+    var freeExports$1 = typeof exports == 'object' && exports && !exports.nodeType && exports;
+
+    /** Detect free variable `module`. */
+    var freeModule$1 = freeExports$1 && typeof module == 'object' && module && !module.nodeType && module;
+
+    /** Detect the popular CommonJS extension `module.exports`. */
+    var moduleExports$1 = freeModule$1 && freeModule$1.exports === freeExports$1;
+
+    /** Detect free variable `process` from Node.js. */
+    var freeProcess = moduleExports$1 && freeGlobal.process;
+
+    /** Used to access faster Node.js helpers. */
+    var nodeUtil = (function() {
+      try {
+        // Use `util.types` for Node.js 10+.
+        var types = freeModule$1 && freeModule$1.require && freeModule$1.require('util').types;
+
+        if (types) {
+          return types;
+        }
+
+        // Legacy `process.binding('util')` for Node.js < 10.
+        return freeProcess && freeProcess.binding && freeProcess.binding('util');
+      } catch (e) {}
+    }());
+
+    /* Node.js helper references. */
+    var nodeIsTypedArray = nodeUtil && nodeUtil.isTypedArray;
+
+    /**
+     * Checks if `value` is classified as a typed array.
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a typed array, else `false`.
+     * @example
+     *
+     * _.isTypedArray(new Uint8Array);
+     * // => true
+     *
+     * _.isTypedArray([]);
+     * // => false
+     */
+    var isTypedArray = nodeIsTypedArray ? baseUnary(nodeIsTypedArray) : baseIsTypedArray;
+
+    /** Used for built-in method references. */
+    var objectProto$8 = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$8 = objectProto$8.hasOwnProperty;
+
+    /**
+     * Creates an array of the enumerable property names of the array-like `value`.
+     *
+     * @private
+     * @param {*} value The value to query.
+     * @param {boolean} inherited Specify returning inherited property names.
+     * @returns {Array} Returns the array of property names.
+     */
+    function arrayLikeKeys(value, inherited) {
+      var isArr = isArray(value),
+          isArg = !isArr && isArguments(value),
+          isBuff = !isArr && !isArg && isBuffer(value),
+          isType = !isArr && !isArg && !isBuff && isTypedArray(value),
+          skipIndexes = isArr || isArg || isBuff || isType,
+          result = skipIndexes ? baseTimes(value.length, String) : [],
+          length = result.length;
+
+      for (var key in value) {
+        if ((inherited || hasOwnProperty$8.call(value, key)) &&
+            !(skipIndexes && (
+               // Safari 9 has enumerable `arguments.length` in strict mode.
+               key == 'length' ||
+               // Node.js 0.10 has enumerable non-index properties on buffers.
+               (isBuff && (key == 'offset' || key == 'parent')) ||
+               // PhantomJS 2 has enumerable non-index properties on typed arrays.
+               (isType && (key == 'buffer' || key == 'byteLength' || key == 'byteOffset')) ||
+               // Skip index properties.
+               isIndex(key, length)
+            ))) {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /** Used for built-in method references. */
+    var objectProto$9 = Object.prototype;
+
+    /**
+     * Checks if `value` is likely a prototype object.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a prototype, else `false`.
+     */
+    function isPrototype(value) {
+      var Ctor = value && value.constructor,
+          proto = (typeof Ctor == 'function' && Ctor.prototype) || objectProto$9;
+
+      return value === proto;
+    }
+
+    /**
+     * Creates a unary function that invokes `func` with its argument transformed.
+     *
+     * @private
+     * @param {Function} func The function to wrap.
+     * @param {Function} transform The argument transform.
+     * @returns {Function} Returns the new function.
+     */
+    function overArg(func, transform) {
+      return function(arg) {
+        return func(transform(arg));
+      };
+    }
+
+    /* Built-in method references for those with the same name as other `lodash` methods. */
+    var nativeKeys = overArg(Object.keys, Object);
+
+    /** Used for built-in method references. */
+    var objectProto$a = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$9 = objectProto$a.hasOwnProperty;
+
+    /**
+     * The base implementation of `_.keys` which doesn't treat sparse arrays as dense.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     */
+    function baseKeys(object) {
+      if (!isPrototype(object)) {
+        return nativeKeys(object);
+      }
+      var result = [];
+      for (var key in Object(object)) {
+        if (hasOwnProperty$9.call(object, key) && key != 'constructor') {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Checks if `value` is array-like. A value is considered array-like if it's
+     * not a function and has a `value.length` that's an integer greater than or
+     * equal to `0` and less than or equal to `Number.MAX_SAFE_INTEGER`.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is array-like, else `false`.
+     * @example
+     *
+     * _.isArrayLike([1, 2, 3]);
+     * // => true
+     *
+     * _.isArrayLike(document.body.children);
+     * // => true
+     *
+     * _.isArrayLike('abc');
+     * // => true
+     *
+     * _.isArrayLike(_.noop);
+     * // => false
+     */
+    function isArrayLike(value) {
+      return value != null && isLength(value.length) && !isFunction(value);
+    }
+
+    /**
+     * Creates an array of the own enumerable property names of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects. See the
+     * [ES spec](http://ecma-international.org/ecma-262/7.0/#sec-object.keys)
+     * for more details.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.keys(new Foo);
+     * // => ['a', 'b'] (iteration order is not guaranteed)
+     *
+     * _.keys('hi');
+     * // => ['0', '1']
+     */
+    function keys(object) {
+      return isArrayLike(object) ? arrayLikeKeys(object) : baseKeys(object);
+    }
+
+    /**
+     * The base implementation of `_.assign` without support for multiple sources
+     * or `customizer` functions.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @returns {Object} Returns `object`.
+     */
+    function baseAssign(object, source) {
+      return object && copyObject(source, keys(source), object);
+    }
+
+    /**
+     * This function is like
+     * [`Object.keys`](http://ecma-international.org/ecma-262/7.0/#sec-object.keys)
+     * except that it includes inherited enumerable properties.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     */
+    function nativeKeysIn(object) {
+      var result = [];
+      if (object != null) {
+        for (var key in Object(object)) {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /** Used for built-in method references. */
+    var objectProto$b = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$a = objectProto$b.hasOwnProperty;
+
+    /**
+     * The base implementation of `_.keysIn` which doesn't treat sparse arrays as dense.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     */
+    function baseKeysIn(object) {
+      if (!isObject(object)) {
+        return nativeKeysIn(object);
+      }
+      var isProto = isPrototype(object),
+          result = [];
+
+      for (var key in object) {
+        if (!(key == 'constructor' && (isProto || !hasOwnProperty$a.call(object, key)))) {
+          result.push(key);
+        }
+      }
+      return result;
+    }
+
+    /**
+     * Creates an array of the own and inherited enumerable property names of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects.
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.keysIn(new Foo);
+     * // => ['a', 'b', 'c'] (iteration order is not guaranteed)
+     */
+    function keysIn$1(object) {
+      return isArrayLike(object) ? arrayLikeKeys(object, true) : baseKeysIn(object);
+    }
+
+    /**
+     * The base implementation of `_.assignIn` without support for multiple sources
+     * or `customizer` functions.
+     *
+     * @private
+     * @param {Object} object The destination object.
+     * @param {Object} source The source object.
+     * @returns {Object} Returns `object`.
+     */
+    function baseAssignIn(object, source) {
+      return object && copyObject(source, keysIn$1(source), object);
+    }
+
+    /** Detect free variable `exports`. */
+    var freeExports$2 = typeof exports == 'object' && exports && !exports.nodeType && exports;
+
+    /** Detect free variable `module`. */
+    var freeModule$2 = freeExports$2 && typeof module == 'object' && module && !module.nodeType && module;
+
+    /** Detect the popular CommonJS extension `module.exports`. */
+    var moduleExports$2 = freeModule$2 && freeModule$2.exports === freeExports$2;
+
+    /** Built-in value references. */
+    var Buffer$1 = moduleExports$2 ? root.Buffer : undefined,
+        allocUnsafe = Buffer$1 ? Buffer$1.allocUnsafe : undefined;
+
+    /**
+     * Creates a clone of  `buffer`.
+     *
+     * @private
+     * @param {Buffer} buffer The buffer to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @returns {Buffer} Returns the cloned buffer.
+     */
+    function cloneBuffer(buffer, isDeep) {
+      if (isDeep) {
+        return buffer.slice();
+      }
+      var length = buffer.length,
+          result = allocUnsafe ? allocUnsafe(length) : new buffer.constructor(length);
+
+      buffer.copy(result);
+      return result;
+    }
+
+    /**
+     * Copies the values of `source` to `array`.
+     *
+     * @private
+     * @param {Array} source The array to copy values from.
+     * @param {Array} [array=[]] The array to copy values to.
+     * @returns {Array} Returns `array`.
+     */
+    function copyArray(source, array) {
+      var index = -1,
+          length = source.length;
+
+      array || (array = Array(length));
+      while (++index < length) {
+        array[index] = source[index];
+      }
+      return array;
+    }
+
+    /**
+     * A specialized version of `_.filter` for arrays without support for
+     * iteratee shorthands.
+     *
+     * @private
+     * @param {Array} [array] The array to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {Array} Returns the new filtered array.
+     */
+    function arrayFilter(array, predicate) {
+      var index = -1,
+          length = array == null ? 0 : array.length,
+          resIndex = 0,
+          result = [];
+
+      while (++index < length) {
+        var value = array[index];
+        if (predicate(value, index, array)) {
+          result[resIndex++] = value;
+        }
+      }
+      return result;
+    }
+
+    /**
+     * This method returns a new empty array.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.13.0
+     * @category Util
+     * @returns {Array} Returns the new empty array.
+     * @example
+     *
+     * var arrays = _.times(2, _.stubArray);
+     *
+     * console.log(arrays);
+     * // => [[], []]
+     *
+     * console.log(arrays[0] === arrays[1]);
+     * // => false
+     */
+    function stubArray() {
+      return [];
+    }
+
+    /** Used for built-in method references. */
+    var objectProto$c = Object.prototype;
+
+    /** Built-in value references. */
+    var propertyIsEnumerable$1 = objectProto$c.propertyIsEnumerable;
+
+    /* Built-in method references for those with the same name as other `lodash` methods. */
+    var nativeGetSymbols = Object.getOwnPropertySymbols;
+
+    /**
+     * Creates an array of the own enumerable symbols of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of symbols.
+     */
+    var getSymbols = !nativeGetSymbols ? stubArray : function(object) {
+      if (object == null) {
+        return [];
+      }
+      object = Object(object);
+      return arrayFilter(nativeGetSymbols(object), function(symbol) {
+        return propertyIsEnumerable$1.call(object, symbol);
+      });
+    };
+
+    /**
+     * Copies own symbols of `source` to `object`.
+     *
+     * @private
+     * @param {Object} source The object to copy symbols from.
+     * @param {Object} [object={}] The object to copy symbols to.
+     * @returns {Object} Returns `object`.
+     */
+    function copySymbols(source, object) {
+      return copyObject(source, getSymbols(source), object);
+    }
+
+    /**
+     * Appends the elements of `values` to `array`.
+     *
+     * @private
+     * @param {Array} array The array to modify.
+     * @param {Array} values The values to append.
+     * @returns {Array} Returns `array`.
+     */
+    function arrayPush(array, values) {
+      var index = -1,
+          length = values.length,
+          offset = array.length;
+
+      while (++index < length) {
+        array[offset + index] = values[index];
+      }
+      return array;
+    }
+
+    /** Built-in value references. */
+    var getPrototype = overArg(Object.getPrototypeOf, Object);
+
+    /* Built-in method references for those with the same name as other `lodash` methods. */
+    var nativeGetSymbols$1 = Object.getOwnPropertySymbols;
+
+    /**
+     * Creates an array of the own and inherited enumerable symbols of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of symbols.
+     */
+    var getSymbolsIn = !nativeGetSymbols$1 ? stubArray : function(object) {
+      var result = [];
+      while (object) {
+        arrayPush(result, getSymbols(object));
+        object = getPrototype(object);
+      }
+      return result;
+    };
+
+    /**
+     * Copies own and inherited symbols of `source` to `object`.
+     *
+     * @private
+     * @param {Object} source The object to copy symbols from.
+     * @param {Object} [object={}] The object to copy symbols to.
+     * @returns {Object} Returns `object`.
+     */
+    function copySymbolsIn(source, object) {
+      return copyObject(source, getSymbolsIn(source), object);
+    }
+
+    /**
+     * The base implementation of `getAllKeys` and `getAllKeysIn` which uses
+     * `keysFunc` and `symbolsFunc` to get the enumerable property names and
+     * symbols of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {Function} keysFunc The function to get the keys of `object`.
+     * @param {Function} symbolsFunc The function to get the symbols of `object`.
+     * @returns {Array} Returns the array of property names and symbols.
+     */
+    function baseGetAllKeys(object, keysFunc, symbolsFunc) {
+      var result = keysFunc(object);
+      return isArray(object) ? result : arrayPush(result, symbolsFunc(object));
+    }
+
+    /**
+     * Creates an array of own enumerable property names and symbols of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names and symbols.
+     */
+    function getAllKeys(object) {
+      return baseGetAllKeys(object, keys, getSymbols);
+    }
+
+    /**
+     * Creates an array of own and inherited enumerable property names and
+     * symbols of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property names and symbols.
+     */
+    function getAllKeysIn(object) {
+      return baseGetAllKeys(object, keysIn$1, getSymbolsIn);
+    }
+
+    /* Built-in method references that are verified to be native. */
+    var DataView = getNative(root, 'DataView');
+
+    /* Built-in method references that are verified to be native. */
+    var Promise$1 = getNative(root, 'Promise');
+
+    /* Built-in method references that are verified to be native. */
+    var Set$1 = getNative(root, 'Set');
+
+    /* Built-in method references that are verified to be native. */
+    var WeakMap = getNative(root, 'WeakMap');
+
+    /** `Object#toString` result references. */
+    var mapTag$1 = '[object Map]',
+        objectTag$1 = '[object Object]',
+        promiseTag = '[object Promise]',
+        setTag$1 = '[object Set]',
+        weakMapTag$1 = '[object WeakMap]';
+
+    var dataViewTag$1 = '[object DataView]';
+
+    /** Used to detect maps, sets, and weakmaps. */
+    var dataViewCtorString = toSource(DataView),
+        mapCtorString = toSource(Map$1),
+        promiseCtorString = toSource(Promise$1),
+        setCtorString = toSource(Set$1),
+        weakMapCtorString = toSource(WeakMap);
+
+    /**
+     * Gets the `toStringTag` of `value`.
+     *
+     * @private
+     * @param {*} value The value to query.
+     * @returns {string} Returns the `toStringTag`.
+     */
+    var getTag = baseGetTag;
+
+    // Fallback for data views, maps, sets, and weak maps in IE 11 and promises in Node.js < 6.
+    if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag$1) ||
+        (Map$1 && getTag(new Map$1) != mapTag$1) ||
+        (Promise$1 && getTag(Promise$1.resolve()) != promiseTag) ||
+        (Set$1 && getTag(new Set$1) != setTag$1) ||
+        (WeakMap && getTag(new WeakMap) != weakMapTag$1)) {
+      getTag = function(value) {
+        var result = baseGetTag(value),
+            Ctor = result == objectTag$1 ? value.constructor : undefined,
+            ctorString = Ctor ? toSource(Ctor) : '';
+
+        if (ctorString) {
+          switch (ctorString) {
+            case dataViewCtorString: return dataViewTag$1;
+            case mapCtorString: return mapTag$1;
+            case promiseCtorString: return promiseTag;
+            case setCtorString: return setTag$1;
+            case weakMapCtorString: return weakMapTag$1;
+          }
+        }
+        return result;
+      };
+    }
+
+    var getTag$1 = getTag;
+
+    /** Used for built-in method references. */
+    var objectProto$d = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$b = objectProto$d.hasOwnProperty;
+
+    /**
+     * Initializes an array clone.
+     *
+     * @private
+     * @param {Array} array The array to clone.
+     * @returns {Array} Returns the initialized clone.
+     */
+    function initCloneArray(array) {
+      var length = array.length,
+          result = new array.constructor(length);
+
+      // Add properties assigned by `RegExp#exec`.
+      if (length && typeof array[0] == 'string' && hasOwnProperty$b.call(array, 'index')) {
+        result.index = array.index;
+        result.input = array.input;
+      }
+      return result;
+    }
+
+    /** Built-in value references. */
+    var Uint8Array = root.Uint8Array;
+
+    /**
+     * Creates a clone of `arrayBuffer`.
+     *
+     * @private
+     * @param {ArrayBuffer} arrayBuffer The array buffer to clone.
+     * @returns {ArrayBuffer} Returns the cloned array buffer.
+     */
+    function cloneArrayBuffer(arrayBuffer) {
+      var result = new arrayBuffer.constructor(arrayBuffer.byteLength);
+      new Uint8Array(result).set(new Uint8Array(arrayBuffer));
+      return result;
+    }
+
+    /**
+     * Creates a clone of `dataView`.
+     *
+     * @private
+     * @param {Object} dataView The data view to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @returns {Object} Returns the cloned data view.
+     */
+    function cloneDataView(dataView, isDeep) {
+      var buffer = isDeep ? cloneArrayBuffer(dataView.buffer) : dataView.buffer;
+      return new dataView.constructor(buffer, dataView.byteOffset, dataView.byteLength);
+    }
+
+    /** Used to match `RegExp` flags from their coerced string values. */
+    var reFlags = /\w*$/;
+
+    /**
+     * Creates a clone of `regexp`.
+     *
+     * @private
+     * @param {Object} regexp The regexp to clone.
+     * @returns {Object} Returns the cloned regexp.
+     */
+    function cloneRegExp(regexp) {
+      var result = new regexp.constructor(regexp.source, reFlags.exec(regexp));
+      result.lastIndex = regexp.lastIndex;
+      return result;
+    }
+
+    /** Used to convert symbols to primitives and strings. */
+    var symbolProto$1 = Symbol$1 ? Symbol$1.prototype : undefined,
+        symbolValueOf = symbolProto$1 ? symbolProto$1.valueOf : undefined;
+
+    /**
+     * Creates a clone of the `symbol` object.
+     *
+     * @private
+     * @param {Object} symbol The symbol object to clone.
+     * @returns {Object} Returns the cloned symbol object.
+     */
+    function cloneSymbol(symbol) {
+      return symbolValueOf ? Object(symbolValueOf.call(symbol)) : {};
+    }
+
+    /**
+     * Creates a clone of `typedArray`.
+     *
+     * @private
+     * @param {Object} typedArray The typed array to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @returns {Object} Returns the cloned typed array.
+     */
+    function cloneTypedArray(typedArray, isDeep) {
+      var buffer = isDeep ? cloneArrayBuffer(typedArray.buffer) : typedArray.buffer;
+      return new typedArray.constructor(buffer, typedArray.byteOffset, typedArray.length);
+    }
+
+    /** `Object#toString` result references. */
+    var boolTag$1 = '[object Boolean]',
+        dateTag$1 = '[object Date]',
+        mapTag$2 = '[object Map]',
+        numberTag$1 = '[object Number]',
+        regexpTag$1 = '[object RegExp]',
+        setTag$2 = '[object Set]',
+        stringTag$1 = '[object String]',
+        symbolTag$1 = '[object Symbol]';
+
+    var arrayBufferTag$1 = '[object ArrayBuffer]',
+        dataViewTag$2 = '[object DataView]',
+        float32Tag$1 = '[object Float32Array]',
+        float64Tag$1 = '[object Float64Array]',
+        int8Tag$1 = '[object Int8Array]',
+        int16Tag$1 = '[object Int16Array]',
+        int32Tag$1 = '[object Int32Array]',
+        uint8Tag$1 = '[object Uint8Array]',
+        uint8ClampedTag$1 = '[object Uint8ClampedArray]',
+        uint16Tag$1 = '[object Uint16Array]',
+        uint32Tag$1 = '[object Uint32Array]';
+
+    /**
+     * Initializes an object clone based on its `toStringTag`.
+     *
+     * **Note:** This function only supports cloning values with tags of
+     * `Boolean`, `Date`, `Error`, `Map`, `Number`, `RegExp`, `Set`, or `String`.
+     *
+     * @private
+     * @param {Object} object The object to clone.
+     * @param {string} tag The `toStringTag` of the object to clone.
+     * @param {boolean} [isDeep] Specify a deep clone.
+     * @returns {Object} Returns the initialized clone.
+     */
+    function initCloneByTag(object, tag, isDeep) {
+      var Ctor = object.constructor;
+      switch (tag) {
+        case arrayBufferTag$1:
+          return cloneArrayBuffer(object);
+
+        case boolTag$1:
+        case dateTag$1:
+          return new Ctor(+object);
+
+        case dataViewTag$2:
+          return cloneDataView(object, isDeep);
+
+        case float32Tag$1: case float64Tag$1:
+        case int8Tag$1: case int16Tag$1: case int32Tag$1:
+        case uint8Tag$1: case uint8ClampedTag$1: case uint16Tag$1: case uint32Tag$1:
+          return cloneTypedArray(object, isDeep);
+
+        case mapTag$2:
+          return new Ctor;
+
+        case numberTag$1:
+        case stringTag$1:
+          return new Ctor(object);
+
+        case regexpTag$1:
+          return cloneRegExp(object);
+
+        case setTag$2:
+          return new Ctor;
+
+        case symbolTag$1:
+          return cloneSymbol(object);
+      }
+    }
+
+    /** Built-in value references. */
+    var objectCreate = Object.create;
+
+    /**
+     * The base implementation of `_.create` without support for assigning
+     * properties to the created object.
+     *
+     * @private
+     * @param {Object} proto The object to inherit from.
+     * @returns {Object} Returns the new object.
+     */
+    var baseCreate = (function() {
+      function object() {}
+      return function(proto) {
+        if (!isObject(proto)) {
+          return {};
+        }
+        if (objectCreate) {
+          return objectCreate(proto);
+        }
+        object.prototype = proto;
+        var result = new object;
+        object.prototype = undefined;
+        return result;
+      };
+    }());
+
+    /**
+     * Initializes an object clone.
+     *
+     * @private
+     * @param {Object} object The object to clone.
+     * @returns {Object} Returns the initialized clone.
+     */
+    function initCloneObject(object) {
+      return (typeof object.constructor == 'function' && !isPrototype(object))
+        ? baseCreate(getPrototype(object))
+        : {};
+    }
+
+    /** `Object#toString` result references. */
+    var mapTag$3 = '[object Map]';
+
+    /**
+     * The base implementation of `_.isMap` without Node.js optimizations.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a map, else `false`.
+     */
+    function baseIsMap(value) {
+      return isObjectLike(value) && getTag$1(value) == mapTag$3;
+    }
+
+    /* Node.js helper references. */
+    var nodeIsMap = nodeUtil && nodeUtil.isMap;
+
+    /**
+     * Checks if `value` is classified as a `Map` object.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.3.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a map, else `false`.
+     * @example
+     *
+     * _.isMap(new Map);
+     * // => true
+     *
+     * _.isMap(new WeakMap);
+     * // => false
+     */
+    var isMap = nodeIsMap ? baseUnary(nodeIsMap) : baseIsMap;
+
+    /** `Object#toString` result references. */
+    var setTag$3 = '[object Set]';
+
+    /**
+     * The base implementation of `_.isSet` without Node.js optimizations.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a set, else `false`.
+     */
+    function baseIsSet(value) {
+      return isObjectLike(value) && getTag$1(value) == setTag$3;
+    }
+
+    /* Node.js helper references. */
+    var nodeIsSet = nodeUtil && nodeUtil.isSet;
+
+    /**
+     * Checks if `value` is classified as a `Set` object.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.3.0
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a set, else `false`.
+     * @example
+     *
+     * _.isSet(new Set);
+     * // => true
+     *
+     * _.isSet(new WeakSet);
+     * // => false
+     */
+    var isSet = nodeIsSet ? baseUnary(nodeIsSet) : baseIsSet;
+
+    /** Used to compose bitmasks for cloning. */
+    var CLONE_DEEP_FLAG = 1,
+        CLONE_FLAT_FLAG = 2,
+        CLONE_SYMBOLS_FLAG = 4;
+
+    /** `Object#toString` result references. */
+    var argsTag$2 = '[object Arguments]',
+        arrayTag$1 = '[object Array]',
+        boolTag$2 = '[object Boolean]',
+        dateTag$2 = '[object Date]',
+        errorTag$1 = '[object Error]',
+        funcTag$2 = '[object Function]',
+        genTag$1 = '[object GeneratorFunction]',
+        mapTag$4 = '[object Map]',
+        numberTag$2 = '[object Number]',
+        objectTag$2 = '[object Object]',
+        regexpTag$2 = '[object RegExp]',
+        setTag$4 = '[object Set]',
+        stringTag$2 = '[object String]',
+        symbolTag$2 = '[object Symbol]',
+        weakMapTag$2 = '[object WeakMap]';
+
+    var arrayBufferTag$2 = '[object ArrayBuffer]',
+        dataViewTag$3 = '[object DataView]',
+        float32Tag$2 = '[object Float32Array]',
+        float64Tag$2 = '[object Float64Array]',
+        int8Tag$2 = '[object Int8Array]',
+        int16Tag$2 = '[object Int16Array]',
+        int32Tag$2 = '[object Int32Array]',
+        uint8Tag$2 = '[object Uint8Array]',
+        uint8ClampedTag$2 = '[object Uint8ClampedArray]',
+        uint16Tag$2 = '[object Uint16Array]',
+        uint32Tag$2 = '[object Uint32Array]';
+
+    /** Used to identify `toStringTag` values supported by `_.clone`. */
+    var cloneableTags = {};
+    cloneableTags[argsTag$2] = cloneableTags[arrayTag$1] =
+    cloneableTags[arrayBufferTag$2] = cloneableTags[dataViewTag$3] =
+    cloneableTags[boolTag$2] = cloneableTags[dateTag$2] =
+    cloneableTags[float32Tag$2] = cloneableTags[float64Tag$2] =
+    cloneableTags[int8Tag$2] = cloneableTags[int16Tag$2] =
+    cloneableTags[int32Tag$2] = cloneableTags[mapTag$4] =
+    cloneableTags[numberTag$2] = cloneableTags[objectTag$2] =
+    cloneableTags[regexpTag$2] = cloneableTags[setTag$4] =
+    cloneableTags[stringTag$2] = cloneableTags[symbolTag$2] =
+    cloneableTags[uint8Tag$2] = cloneableTags[uint8ClampedTag$2] =
+    cloneableTags[uint16Tag$2] = cloneableTags[uint32Tag$2] = true;
+    cloneableTags[errorTag$1] = cloneableTags[funcTag$2] =
+    cloneableTags[weakMapTag$2] = false;
+
+    /**
+     * The base implementation of `_.clone` and `_.cloneDeep` which tracks
+     * traversed objects.
+     *
+     * @private
+     * @param {*} value The value to clone.
+     * @param {boolean} bitmask The bitmask flags.
+     *  1 - Deep clone
+     *  2 - Flatten inherited properties
+     *  4 - Clone symbols
+     * @param {Function} [customizer] The function to customize cloning.
+     * @param {string} [key] The key of `value`.
+     * @param {Object} [object] The parent object of `value`.
+     * @param {Object} [stack] Tracks traversed objects and their clone counterparts.
+     * @returns {*} Returns the cloned value.
+     */
+    function baseClone(value, bitmask, customizer, key, object, stack) {
+      var result,
+          isDeep = bitmask & CLONE_DEEP_FLAG,
+          isFlat = bitmask & CLONE_FLAT_FLAG,
+          isFull = bitmask & CLONE_SYMBOLS_FLAG;
+
+      if (customizer) {
+        result = object ? customizer(value, key, object, stack) : customizer(value);
+      }
+      if (result !== undefined) {
+        return result;
+      }
+      if (!isObject(value)) {
+        return value;
+      }
+      var isArr = isArray(value);
+      if (isArr) {
+        result = initCloneArray(value);
+        if (!isDeep) {
+          return copyArray(value, result);
+        }
+      } else {
+        var tag = getTag$1(value),
+            isFunc = tag == funcTag$2 || tag == genTag$1;
+
+        if (isBuffer(value)) {
+          return cloneBuffer(value, isDeep);
+        }
+        if (tag == objectTag$2 || tag == argsTag$2 || (isFunc && !object)) {
+          result = (isFlat || isFunc) ? {} : initCloneObject(value);
+          if (!isDeep) {
+            return isFlat
+              ? copySymbolsIn(value, baseAssignIn(result, value))
+              : copySymbols(value, baseAssign(result, value));
+          }
+        } else {
+          if (!cloneableTags[tag]) {
+            return object ? value : {};
+          }
+          result = initCloneByTag(value, tag, isDeep);
+        }
+      }
+      // Check for circular references and return its corresponding clone.
+      stack || (stack = new Stack);
+      var stacked = stack.get(value);
+      if (stacked) {
+        return stacked;
+      }
+      stack.set(value, result);
+
+      if (isSet(value)) {
+        value.forEach(function(subValue) {
+          result.add(baseClone(subValue, bitmask, customizer, subValue, value, stack));
+        });
+      } else if (isMap(value)) {
+        value.forEach(function(subValue, key) {
+          result.set(key, baseClone(subValue, bitmask, customizer, key, value, stack));
+        });
+      }
+
+      var keysFunc = isFull
+        ? (isFlat ? getAllKeysIn : getAllKeys)
+        : (isFlat ? keysIn : keys);
+
+      var props = isArr ? undefined : keysFunc(value);
+      arrayEach(props || value, function(subValue, key) {
+        if (props) {
+          key = subValue;
+          subValue = value[key];
+        }
+        // Recursively populate clone (susceptible to call stack limits).
+        assignValue(result, key, baseClone(subValue, bitmask, customizer, key, value, stack));
+      });
+      return result;
+    }
+
+    /** Used to compose bitmasks for cloning. */
+    var CLONE_DEEP_FLAG$1 = 1,
+        CLONE_SYMBOLS_FLAG$1 = 4;
+
+    /**
+     * This method is like `_.cloneWith` except that it recursively clones `value`.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Lang
+     * @param {*} value The value to recursively clone.
+     * @param {Function} [customizer] The function to customize cloning.
+     * @returns {*} Returns the deep cloned value.
+     * @see _.cloneWith
+     * @example
+     *
+     * function customizer(value) {
+     *   if (_.isElement(value)) {
+     *     return value.cloneNode(true);
+     *   }
+     * }
+     *
+     * var el = _.cloneDeepWith(document.body, customizer);
+     *
+     * console.log(el === document.body);
+     * // => false
+     * console.log(el.nodeName);
+     * // => 'BODY'
+     * console.log(el.childNodes.length);
+     * // => 20
+     */
+    function cloneDeepWith(value, customizer) {
+      customizer = typeof customizer == 'function' ? customizer : undefined;
+      return baseClone(value, CLONE_DEEP_FLAG$1 | CLONE_SYMBOLS_FLAG$1, customizer);
+    }
+
+    /** `Object#toString` result references. */
+    var stringTag$3 = '[object String]';
+
+    /**
+     * Checks if `value` is classified as a `String` primitive or object.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` is a string, else `false`.
+     * @example
+     *
+     * _.isString('abc');
+     * // => true
+     *
+     * _.isString(1);
+     * // => false
+     */
+    function isString(value) {
+      return typeof value == 'string' ||
+        (!isArray(value) && isObjectLike(value) && baseGetTag(value) == stringTag$3);
+    }
+
+    /**
+     * Converts `iterator` to an array.
+     *
+     * @private
+     * @param {Object} iterator The iterator to convert.
+     * @returns {Array} Returns the converted array.
+     */
+    function iteratorToArray(iterator) {
+      var data,
+          result = [];
+
+      while (!(data = iterator.next()).done) {
+        result.push(data.value);
+      }
+      return result;
+    }
+
+    /**
+     * Converts `map` to its key-value pairs.
+     *
+     * @private
+     * @param {Object} map The map to convert.
+     * @returns {Array} Returns the key-value pairs.
+     */
+    function mapToArray(map) {
+      var index = -1,
+          result = Array(map.size);
+
+      map.forEach(function(value, key) {
+        result[++index] = [key, value];
+      });
+      return result;
+    }
+
+    /**
+     * Converts `set` to an array of its values.
+     *
+     * @private
+     * @param {Object} set The set to convert.
+     * @returns {Array} Returns the values.
+     */
+    function setToArray(set) {
+      var index = -1,
+          result = Array(set.size);
+
+      set.forEach(function(value) {
+        result[++index] = value;
+      });
+      return result;
+    }
+
+    /**
+     * Converts an ASCII `string` to an array.
+     *
+     * @private
+     * @param {string} string The string to convert.
+     * @returns {Array} Returns the converted array.
+     */
+    function asciiToArray(string) {
+      return string.split('');
+    }
+
+    /** Used to compose unicode character classes. */
+    var rsAstralRange = '\\ud800-\\udfff',
+        rsComboMarksRange = '\\u0300-\\u036f',
+        reComboHalfMarksRange = '\\ufe20-\\ufe2f',
+        rsComboSymbolsRange = '\\u20d0-\\u20ff',
+        rsComboRange = rsComboMarksRange + reComboHalfMarksRange + rsComboSymbolsRange,
+        rsVarRange = '\\ufe0e\\ufe0f';
+
+    /** Used to compose unicode capture groups. */
+    var rsZWJ = '\\u200d';
+
+    /** Used to detect strings with [zero-width joiners or code points from the astral planes](http://eev.ee/blog/2015/09/12/dark-corners-of-unicode/). */
+    var reHasUnicode = RegExp('[' + rsZWJ + rsAstralRange  + rsComboRange + rsVarRange + ']');
+
+    /**
+     * Checks if `string` contains Unicode symbols.
+     *
+     * @private
+     * @param {string} string The string to inspect.
+     * @returns {boolean} Returns `true` if a symbol is found, else `false`.
+     */
+    function hasUnicode(string) {
+      return reHasUnicode.test(string);
+    }
+
+    /** Used to compose unicode character classes. */
+    var rsAstralRange$1 = '\\ud800-\\udfff',
+        rsComboMarksRange$1 = '\\u0300-\\u036f',
+        reComboHalfMarksRange$1 = '\\ufe20-\\ufe2f',
+        rsComboSymbolsRange$1 = '\\u20d0-\\u20ff',
+        rsComboRange$1 = rsComboMarksRange$1 + reComboHalfMarksRange$1 + rsComboSymbolsRange$1,
+        rsVarRange$1 = '\\ufe0e\\ufe0f';
+
+    /** Used to compose unicode capture groups. */
+    var rsAstral = '[' + rsAstralRange$1 + ']',
+        rsCombo = '[' + rsComboRange$1 + ']',
+        rsFitz = '\\ud83c[\\udffb-\\udfff]',
+        rsModifier = '(?:' + rsCombo + '|' + rsFitz + ')',
+        rsNonAstral = '[^' + rsAstralRange$1 + ']',
+        rsRegional = '(?:\\ud83c[\\udde6-\\uddff]){2}',
+        rsSurrPair = '[\\ud800-\\udbff][\\udc00-\\udfff]',
+        rsZWJ$1 = '\\u200d';
+
+    /** Used to compose unicode regexes. */
+    var reOptMod = rsModifier + '?',
+        rsOptVar = '[' + rsVarRange$1 + ']?',
+        rsOptJoin = '(?:' + rsZWJ$1 + '(?:' + [rsNonAstral, rsRegional, rsSurrPair].join('|') + ')' + rsOptVar + reOptMod + ')*',
+        rsSeq = rsOptVar + reOptMod + rsOptJoin,
+        rsSymbol = '(?:' + [rsNonAstral + rsCombo + '?', rsCombo, rsRegional, rsSurrPair, rsAstral].join('|') + ')';
+
+    /** Used to match [string symbols](https://mathiasbynens.be/notes/javascript-unicode). */
+    var reUnicode = RegExp(rsFitz + '(?=' + rsFitz + ')|' + rsSymbol + rsSeq, 'g');
+
+    /**
+     * Converts a Unicode `string` to an array.
+     *
+     * @private
+     * @param {string} string The string to convert.
+     * @returns {Array} Returns the converted array.
+     */
+    function unicodeToArray(string) {
+      return string.match(reUnicode) || [];
+    }
+
+    /**
+     * Converts `string` to an array.
+     *
+     * @private
+     * @param {string} string The string to convert.
+     * @returns {Array} Returns the converted array.
+     */
+    function stringToArray(string) {
+      return hasUnicode(string)
+        ? unicodeToArray(string)
+        : asciiToArray(string);
+    }
+
+    /**
+     * The base implementation of `_.values` and `_.valuesIn` which creates an
+     * array of `object` property values corresponding to the property names
+     * of `props`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @param {Array} props The property names to get values for.
+     * @returns {Object} Returns the array of property values.
+     */
+    function baseValues(object, props) {
+      return arrayMap(props, function(key) {
+        return object[key];
+      });
+    }
+
+    /**
+     * Creates an array of the own enumerable string keyed property values of `object`.
+     *
+     * **Note:** Non-object values are coerced to objects.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Object
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the array of property values.
+     * @example
+     *
+     * function Foo() {
+     *   this.a = 1;
+     *   this.b = 2;
+     * }
+     *
+     * Foo.prototype.c = 3;
+     *
+     * _.values(new Foo);
+     * // => [1, 2] (iteration order is not guaranteed)
+     *
+     * _.values('hi');
+     * // => ['h', 'i']
+     */
+    function values(object) {
+      return object == null ? [] : baseValues(object, keys(object));
+    }
+
+    /** `Object#toString` result references. */
+    var mapTag$5 = '[object Map]',
+        setTag$5 = '[object Set]';
+
+    /** Built-in value references. */
+    var symIterator = Symbol$1 ? Symbol$1.iterator : undefined;
+
+    /**
+     * Converts `value` to an array.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Lang
+     * @param {*} value The value to convert.
+     * @returns {Array} Returns the converted array.
+     * @example
+     *
+     * _.toArray({ 'a': 1, 'b': 2 });
+     * // => [1, 2]
+     *
+     * _.toArray('abc');
+     * // => ['a', 'b', 'c']
+     *
+     * _.toArray(1);
+     * // => []
+     *
+     * _.toArray(null);
+     * // => []
+     */
+    function toArray(value) {
+      if (!value) {
+        return [];
+      }
+      if (isArrayLike(value)) {
+        return isString(value) ? stringToArray(value) : copyArray(value);
+      }
+      if (symIterator && value[symIterator]) {
+        return iteratorToArray(value[symIterator]());
+      }
+      var tag = getTag$1(value),
+          func = tag == mapTag$5 ? mapToArray : (tag == setTag$5 ? setToArray : values);
+
+      return func(value);
+    }
+
+    var toString$1 = Object.prototype.toString;
+    var errorToString = Error.prototype.toString;
+    var regExpToString = RegExp.prototype.toString;
+    var symbolToString$1 = typeof Symbol !== 'undefined' ? Symbol.prototype.toString : function () {
+      return '';
+    };
+    var SYMBOL_REGEXP = /^Symbol\((.*)\)(.*)$/;
+
+    function printNumber(val) {
+      if (val != +val) return 'NaN';
+      var isNegativeZero = val === 0 && 1 / val < 0;
+      return isNegativeZero ? '-0' : '' + val;
+    }
+
+    function printSimpleValue(val, quoteStrings) {
+      if (quoteStrings === void 0) {
+        quoteStrings = false;
+      }
+
+      if (val == null || val === true || val === false) return '' + val;
+      var typeOf = typeof val;
+      if (typeOf === 'number') return printNumber(val);
+      if (typeOf === 'string') return quoteStrings ? "\"" + val + "\"" : val;
+      if (typeOf === 'function') return '[Function ' + (val.name || 'anonymous') + ']';
+      if (typeOf === 'symbol') return symbolToString$1.call(val).replace(SYMBOL_REGEXP, 'Symbol($1)');
+      var tag = toString$1.call(val).slice(8, -1);
+      if (tag === 'Date') return isNaN(val.getTime()) ? '' + val : val.toISOString(val);
+      if (tag === 'Error' || val instanceof Error) return '[' + errorToString.call(val) + ']';
+      if (tag === 'RegExp') return regExpToString.call(val);
+      return null;
+    }
+
+    function printValue(value, quoteStrings) {
+      var result = printSimpleValue(value, quoteStrings);
+      if (result !== null) return result;
+      return JSON.stringify(value, function (key, value) {
+        var result = printSimpleValue(this[key], quoteStrings);
+        if (result !== null) return result;
+        return value;
+      }, 2);
+    }
+
+    var mixed = {
+      default: '${path} is invalid',
+      required: '${path} is a required field',
+      oneOf: '${path} must be one of the following values: ${values}',
+      notOneOf: '${path} must not be one of the following values: ${values}',
+      notType: function notType(_ref) {
+        var path = _ref.path,
+            type = _ref.type,
+            value = _ref.value,
+            originalValue = _ref.originalValue;
+        var isCast = originalValue != null && originalValue !== value;
+        var msg = path + " must be a `" + type + "` type, " + ("but the final value was: `" + printValue(value, true) + "`") + (isCast ? " (cast from the value `" + printValue(originalValue, true) + "`)." : '.');
+
+        if (value === null) {
+          msg += "\n If \"null\" is intended as an empty value be sure to mark the schema as `.nullable()`";
+        }
+
+        return msg;
+      },
+      defined: '${path} must be defined'
+    };
+    var string = {
+      length: '${path} must be exactly ${length} characters',
+      min: '${path} must be at least ${min} characters',
+      max: '${path} must be at most ${max} characters',
+      matches: '${path} must match the following: "${regex}"',
+      email: '${path} must be a valid email',
+      url: '${path} must be a valid URL',
+      uuid: '${path} must be a valid UUID',
+      trim: '${path} must be a trimmed string',
+      lowercase: '${path} must be a lowercase string',
+      uppercase: '${path} must be a upper case string'
+    };
+    var number = {
+      min: '${path} must be greater than or equal to ${min}',
+      max: '${path} must be less than or equal to ${max}',
+      lessThan: '${path} must be less than ${less}',
+      moreThan: '${path} must be greater than ${more}',
+      notEqual: '${path} must be not equal to ${notEqual}',
+      positive: '${path} must be a positive number',
+      negative: '${path} must be a negative number',
+      integer: '${path} must be an integer'
+    };
+    var date = {
+      min: '${path} field must be later than ${min}',
+      max: '${path} field must be at earlier than ${max}'
+    };
+    var object = {
+      noUnknown: '${path} field has unspecified keys: ${unknown}'
+    };
+    var array = {
+      min: '${path} field must have at least ${min} items',
+      max: '${path} field must have less than or equal to ${max} items'
+    };
+
+    var isSchema = (function (obj) {
+      return obj && obj.__isYupSchema__;
+    });
+
+    var Condition = /*#__PURE__*/function () {
+      function Condition(refs, options) {
+        this.refs = refs;
+
+        if (typeof options === 'function') {
+          this.fn = options;
+          return;
+        }
+
+        if (!has(options, 'is')) throw new TypeError('`is:` is required for `when()` conditions');
+        if (!options.then && !options.otherwise) throw new TypeError('either `then:` or `otherwise:` is required for `when()` conditions');
+        var is = options.is,
+            then = options.then,
+            otherwise = options.otherwise;
+        var check = typeof is === 'function' ? is : function () {
+          for (var _len = arguments.length, values = new Array(_len), _key = 0; _key < _len; _key++) {
+            values[_key] = arguments[_key];
+          }
+
+          return values.every(function (value) {
+            return value === is;
+          });
+        };
+
+        this.fn = function () {
+          for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            args[_key2] = arguments[_key2];
+          }
+
+          var options = args.pop();
+          var schema = args.pop();
+          var branch = check.apply(void 0, args) ? then : otherwise;
+          if (!branch) return undefined;
+          if (typeof branch === 'function') return branch(schema);
+          return schema.concat(branch.resolve(options));
+        };
+      }
+
+      var _proto = Condition.prototype;
+
+      _proto.resolve = function resolve(base, options) {
+        var values = this.refs.map(function (ref) {
+          return ref.getValue(options);
+        });
+        var schema = this.fn.apply(base, values.concat(base, options));
+        if (schema === undefined || schema === base) return base;
+        if (!isSchema(schema)) throw new TypeError('conditions must return a schema object');
+        return schema.resolve(options);
+      };
+
+      return Condition;
+    }();
+
+    function _objectWithoutPropertiesLoose(source, excluded) {
+      if (source == null) return {};
+      var target = {};
+      var sourceKeys = Object.keys(source);
+      var key, i;
+
+      for (i = 0; i < sourceKeys.length; i++) {
+        key = sourceKeys[i];
+        if (excluded.indexOf(key) >= 0) continue;
+        target[key] = source[key];
+      }
+
+      return target;
+    }
+
+    /* jshint node: true */
+
+    function makeArrayFrom(obj) {
+      return Array.prototype.slice.apply(obj);
+    }
+
+    var
+      PENDING = "pending",
+      RESOLVED = "resolved",
+      REJECTED = "rejected";
+
+    function SynchronousPromise(handler) {
+      this.status = PENDING;
+      this._continuations = [];
+      this._parent = null;
+      this._paused = false;
+      if (handler) {
+        handler.call(
+          this,
+          this._continueWith.bind(this),
+          this._failWith.bind(this)
+        );
+      }
+    }
+
+    function looksLikeAPromise(obj) {
+      return obj && typeof (obj.then) === "function";
+    }
+
+    function passThrough(value) {
+      return value;
+    }
+
+    SynchronousPromise.prototype = {
+      then: function (nextFn, catchFn) {
+        var next = SynchronousPromise.unresolved()._setParent(this);
+        if (this._isRejected()) {
+          if (this._paused) {
+            this._continuations.push({
+              promise: next,
+              nextFn: nextFn,
+              catchFn: catchFn
+            });
+            return next;
+          }
+          if (catchFn) {
+            try {
+              var catchResult = catchFn(this._error);
+              if (looksLikeAPromise(catchResult)) {
+                this._chainPromiseData(catchResult, next);
+                return next;
+              } else {
+                return SynchronousPromise.resolve(catchResult)._setParent(this);
+              }
+            } catch (e) {
+              return SynchronousPromise.reject(e)._setParent(this);
+            }
+          }
+          return SynchronousPromise.reject(this._error)._setParent(this);
+        }
+        this._continuations.push({
+          promise: next,
+          nextFn: nextFn,
+          catchFn: catchFn
+        });
+        this._runResolutions();
+        return next;
+      },
+      catch: function (handler) {
+        if (this._isResolved()) {
+          return SynchronousPromise.resolve(this._data)._setParent(this);
+        }
+        var next = SynchronousPromise.unresolved()._setParent(this);
+        this._continuations.push({
+          promise: next,
+          catchFn: handler
+        });
+        this._runRejections();
+        return next;
+      },
+      finally: function (callback) {
+        var ran = false;
+
+        function runFinally(result, err) {
+          if (!ran) {
+            ran = true;
+            if (!callback) {
+              callback = passThrough;
+            }
+            var callbackResult = callback(result);
+            if (looksLikeAPromise(callbackResult)) {
+              return callbackResult.then(function () {
+                if (err) {
+                  throw err;
+                }
+                return result;
+              });
+            } else {
+              return result;
+            }
+          }
+        }
+
+        return this
+          .then(function (result) {
+            return runFinally(result);
+          })
+          .catch(function (err) {
+            return runFinally(null, err);
+          });
+      },
+      pause: function () {
+        this._paused = true;
+        return this;
+      },
+      resume: function () {
+        var firstPaused = this._findFirstPaused();
+        if (firstPaused) {
+          firstPaused._paused = false;
+          firstPaused._runResolutions();
+          firstPaused._runRejections();
+        }
+        return this;
+      },
+      _findAncestry: function () {
+        return this._continuations.reduce(function (acc, cur) {
+          if (cur.promise) {
+            var node = {
+              promise: cur.promise,
+              children: cur.promise._findAncestry()
+            };
+            acc.push(node);
+          }
+          return acc;
+        }, []);
+      },
+      _setParent: function (parent) {
+        if (this._parent) {
+          throw new Error("parent already set");
+        }
+        this._parent = parent;
+        return this;
+      },
+      _continueWith: function (data) {
+        var firstPending = this._findFirstPending();
+        if (firstPending) {
+          firstPending._data = data;
+          firstPending._setResolved();
+        }
+      },
+      _findFirstPending: function () {
+        return this._findFirstAncestor(function (test) {
+          return test._isPending && test._isPending();
+        });
+      },
+      _findFirstPaused: function () {
+        return this._findFirstAncestor(function (test) {
+          return test._paused;
+        });
+      },
+      _findFirstAncestor: function (matching) {
+        var test = this;
+        var result;
+        while (test) {
+          if (matching(test)) {
+            result = test;
+          }
+          test = test._parent;
+        }
+        return result;
+      },
+      _failWith: function (error) {
+        var firstRejected = this._findFirstPending();
+        if (firstRejected) {
+          firstRejected._error = error;
+          firstRejected._setRejected();
+        }
+      },
+      _takeContinuations: function () {
+        return this._continuations.splice(0, this._continuations.length);
+      },
+      _runRejections: function () {
+        if (this._paused || !this._isRejected()) {
+          return;
+        }
+        var
+          error = this._error,
+          continuations = this._takeContinuations(),
+          self = this;
+        continuations.forEach(function (cont) {
+          if (cont.catchFn) {
+            try {
+              var catchResult = cont.catchFn(error);
+              self._handleUserFunctionResult(catchResult, cont.promise);
+            } catch (e) {
+              cont.promise.reject(e);
+            }
+          } else {
+            cont.promise.reject(error);
+          }
+        });
+      },
+      _runResolutions: function () {
+        if (this._paused || !this._isResolved() || this._isPending()) {
+          return;
+        }
+        var continuations = this._takeContinuations();
+        if (looksLikeAPromise(this._data)) {
+          return this._handleWhenResolvedDataIsPromise(this._data);
+        }
+        var data = this._data;
+        var self = this;
+        continuations.forEach(function (cont) {
+          if (cont.nextFn) {
+            try {
+              var result = cont.nextFn(data);
+              self._handleUserFunctionResult(result, cont.promise);
+            } catch (e) {
+              self._handleResolutionError(e, cont);
+            }
+          } else if (cont.promise) {
+            cont.promise.resolve(data);
+          }
+        });
+      },
+      _handleResolutionError: function (e, continuation) {
+        this._setRejected();
+        if (continuation.catchFn) {
+          try {
+            continuation.catchFn(e);
+            return;
+          } catch (e2) {
+            e = e2;
+          }
+        }
+        if (continuation.promise) {
+          continuation.promise.reject(e);
+        }
+      },
+      _handleWhenResolvedDataIsPromise: function (data) {
+        var self = this;
+        return data.then(function (result) {
+          self._data = result;
+          self._runResolutions();
+        }).catch(function (error) {
+          self._error = error;
+          self._setRejected();
+          self._runRejections();
+        });
+      },
+      _handleUserFunctionResult: function (data, nextSynchronousPromise) {
+        if (looksLikeAPromise(data)) {
+          this._chainPromiseData(data, nextSynchronousPromise);
+        } else {
+          nextSynchronousPromise.resolve(data);
+        }
+      },
+      _chainPromiseData: function (promiseData, nextSynchronousPromise) {
+        promiseData.then(function (newData) {
+          nextSynchronousPromise.resolve(newData);
+        }).catch(function (newError) {
+          nextSynchronousPromise.reject(newError);
+        });
+      },
+      _setResolved: function () {
+        this.status = RESOLVED;
+        if (!this._paused) {
+          this._runResolutions();
+        }
+      },
+      _setRejected: function () {
+        this.status = REJECTED;
+        if (!this._paused) {
+          this._runRejections();
+        }
+      },
+      _isPending: function () {
+        return this.status === PENDING;
+      },
+      _isResolved: function () {
+        return this.status === RESOLVED;
+      },
+      _isRejected: function () {
+        return this.status === REJECTED;
+      }
+    };
+
+    SynchronousPromise.resolve = function (result) {
+      return new SynchronousPromise(function (resolve, reject) {
+        if (looksLikeAPromise(result)) {
+          result.then(function (newResult) {
+            resolve(newResult);
+          }).catch(function (error) {
+            reject(error);
+          });
+        } else {
+          resolve(result);
+        }
+      });
+    };
+
+    SynchronousPromise.reject = function (result) {
+      return new SynchronousPromise(function (resolve, reject) {
+        reject(result);
+      });
+    };
+
+    SynchronousPromise.unresolved = function () {
+      return new SynchronousPromise(function (resolve, reject) {
+        this.resolve = resolve;
+        this.reject = reject;
+      });
+    };
+
+    SynchronousPromise.all = function () {
+      var args = makeArrayFrom(arguments);
+      if (Array.isArray(args[0])) {
+        args = args[0];
+      }
+      if (!args.length) {
+        return SynchronousPromise.resolve([]);
+      }
+      return new SynchronousPromise(function (resolve, reject) {
+        var
+          allData = [],
+          numResolved = 0,
+          doResolve = function () {
+            if (numResolved === args.length) {
+              resolve(allData);
+            }
+          },
+          rejected = false,
+          doReject = function (err) {
+            if (rejected) {
+              return;
+            }
+            rejected = true;
+            reject(err);
+          };
+        args.forEach(function (arg, idx) {
+          SynchronousPromise.resolve(arg).then(function (thisResult) {
+            allData[idx] = thisResult;
+            numResolved += 1;
+            doResolve();
+          }).catch(function (err) {
+            doReject(err);
+          });
+        });
+      });
+    };
+
+    function createAggregateErrorFrom(errors) {
+      /* jshint ignore:start */
+      if (typeof window !== "undefined" && "AggregateError" in window) {
+        return new window.AggregateError(errors);
+      }
+      /* jshint ignore:end */
+
+      return { errors: errors };
+    }
+
+    SynchronousPromise.any = function () {
+      var args = makeArrayFrom(arguments);
+      if (Array.isArray(args[0])) {
+        args = args[0];
+      }
+      if (!args.length) {
+        return SynchronousPromise.reject(createAggregateErrorFrom([]));
+      }
+      return new SynchronousPromise(function (resolve, reject) {
+        var
+          allErrors = [],
+          numRejected = 0,
+          doReject = function () {
+            if (numRejected === args.length) {
+              reject(createAggregateErrorFrom(allErrors));
+            }
+          },
+          resolved = false,
+          doResolve = function (result) {
+            if (resolved) {
+              return;
+            }
+            resolved = true;
+            resolve(result);
+          };
+        args.forEach(function (arg, idx) {
+          SynchronousPromise.resolve(arg).then(function (thisResult) {
+            doResolve(thisResult);
+          }).catch(function (err) {
+            allErrors[idx] = err;
+            numRejected += 1;
+            doReject();
+          });
+        });
+      });
+    };
+
+    SynchronousPromise.allSettled = function () {
+      var args = makeArrayFrom(arguments);
+      if (Array.isArray(args[0])) {
+        args = args[0];
+      }
+      if (!args.length) {
+        return SynchronousPromise.resolve([]);
+      }
+      return new SynchronousPromise(function (resolve) {
+        var
+          allData = [],
+          numSettled = 0,
+          doSettled = function () {
+            numSettled += 1;
+            if (numSettled === args.length) {
+              resolve(allData);
+            }
+          };
+        args.forEach(function (arg, idx) {
+          SynchronousPromise.resolve(arg).then(function (thisResult) {
+            allData[idx] = {
+              status: "fulfilled",
+              value: thisResult
+            };
+            doSettled();
+          }).catch(function (err) {
+            allData[idx] = {
+              status: "rejected",
+              reason: err
+            };
+            doSettled();
+          });
+        });
+      });
+    };
+
+    /* jshint ignore:start */
+    if (Promise === SynchronousPromise) {
+      throw new Error("Please use SynchronousPromise.installGlobally() to install globally");
+    }
+    var RealPromise = Promise;
+    SynchronousPromise.installGlobally = function (__awaiter) {
+      if (Promise === SynchronousPromise) {
+        return __awaiter;
+      }
+      var result = patchAwaiterIfRequired(__awaiter);
+      Promise = SynchronousPromise;
+      return result;
+    };
+
+    SynchronousPromise.uninstallGlobally = function () {
+      if (Promise === SynchronousPromise) {
+        Promise = RealPromise;
+      }
+    };
+
+    function patchAwaiterIfRequired(__awaiter) {
+      if (typeof (__awaiter) === "undefined" || __awaiter.__patched) {
+        return __awaiter;
+      }
+      var originalAwaiter = __awaiter;
+      __awaiter = function () {
+        originalAwaiter.apply(this, makeArrayFrom(arguments));
+      };
+      __awaiter.__patched = true;
+      return __awaiter;
+    }
+
+    /* jshint ignore:end */
+
+    var synchronousPromise = {
+      SynchronousPromise: SynchronousPromise
+    };
+
+    var strReg = /\$\{\s*(\w+)\s*\}/g;
+
+    var replace = function replace(str) {
+      return function (params) {
+        return str.replace(strReg, function (_, key) {
+          return printValue(params[key]);
+        });
+      };
+    };
+
+    function ValidationError(errors, value, field, type) {
+      var _this = this;
+
+      this.name = 'ValidationError';
+      this.value = value;
+      this.path = field;
+      this.type = type;
+      this.errors = [];
+      this.inner = [];
+      if (errors) [].concat(errors).forEach(function (err) {
+        _this.errors = _this.errors.concat(err.errors || err);
+        if (err.inner) _this.inner = _this.inner.concat(err.inner.length ? err.inner : err);
+      });
+      this.message = this.errors.length > 1 ? this.errors.length + " errors occurred" : this.errors[0];
+      if (Error.captureStackTrace) Error.captureStackTrace(this, ValidationError);
+    }
+    ValidationError.prototype = Object.create(Error.prototype);
+    ValidationError.prototype.constructor = ValidationError;
+
+    ValidationError.isError = function (err) {
+      return err && err.name === 'ValidationError';
+    };
+
+    ValidationError.formatError = function (message, params) {
+      if (typeof message === 'string') message = replace(message);
+
+      var fn = function fn(params) {
+        params.path = params.label || params.path || 'this';
+        return typeof message === 'function' ? message(params) : message;
+      };
+
+      return arguments.length === 1 ? fn : fn(params);
+    };
+
+    var promise = function promise(sync) {
+      return sync ? synchronousPromise.SynchronousPromise : Promise;
+    };
+
+    var unwrapError = function unwrapError(errors) {
+      if (errors === void 0) {
+        errors = [];
+      }
+
+      return errors.inner && errors.inner.length ? errors.inner : [].concat(errors);
+    };
+
+    function scopeToValue(promises, value, sync) {
+      //console.log('scopeToValue', promises, value)
+      var p = promise(sync).all(promises); //console.log('scopeToValue B', p)
+
+      var b = p.catch(function (err) {
+        if (err.name === 'ValidationError') err.value = value;
+        throw err;
+      }); //console.log('scopeToValue c', b)
+
+      var c = b.then(function () {
+        return value;
+      }); //console.log('scopeToValue d', c)
+
+      return c;
+    }
+    /**
+     * If not failing on the first error, catch the errors
+     * and collect them in an array
+     */
+
+
+    function propagateErrors(endEarly, errors) {
+      return endEarly ? null : function (err) {
+        errors.push(err);
+        return err.value;
+      };
+    }
+    function settled(promises, sync) {
+      var Promise = promise(sync);
+      return Promise.all(promises.map(function (p) {
+        return Promise.resolve(p).then(function (value) {
+          return {
+            fulfilled: true,
+            value: value
+          };
+        }, function (value) {
+          return {
+            fulfilled: false,
+            value: value
+          };
+        });
+      }));
+    }
+    function collectErrors(_ref) {
+      var validations = _ref.validations,
+          value = _ref.value,
+          path = _ref.path,
+          sync = _ref.sync,
+          errors = _ref.errors,
+          sort = _ref.sort;
+      errors = unwrapError(errors);
+      return settled(validations, sync).then(function (results) {
+        var nestedErrors = results.filter(function (r) {
+          return !r.fulfilled;
+        }).reduce(function (arr, _ref2) {
+          var error = _ref2.value;
+
+          // we are only collecting validation errors
+          if (!ValidationError.isError(error)) {
+            throw error;
+          }
+
+          return arr.concat(error);
+        }, []);
+        if (sort) nestedErrors.sort(sort); //show parent errors after the nested ones: name.first, name
+
+        errors = nestedErrors.concat(errors);
+        if (errors.length) throw new ValidationError(errors, value, path);
+        return value;
+      });
+    }
+    function runValidations(_ref3) {
+      var endEarly = _ref3.endEarly,
+          options = _objectWithoutPropertiesLoose(_ref3, ["endEarly"]);
+
+      if (endEarly) return scopeToValue(options.validations, options.value, options.sync);
+      return collectErrors(options);
+    }
+
+    var isObject$1 = function isObject(obj) {
+      return Object.prototype.toString.call(obj) === '[object Object]';
+    };
+
+    function prependDeep(target, source) {
+      for (var key in source) {
+        if (has(source, key)) {
+          var sourceVal = source[key],
+              targetVal = target[key];
+
+          if (targetVal === undefined) {
+            target[key] = sourceVal;
+          } else if (targetVal === sourceVal) {
+            continue;
+          } else if (isSchema(targetVal)) {
+            if (isSchema(sourceVal)) target[key] = sourceVal.concat(targetVal);
+          } else if (isObject$1(targetVal)) {
+            if (isObject$1(sourceVal)) target[key] = prependDeep(targetVal, sourceVal);
+          } else if (Array.isArray(targetVal)) {
+            if (Array.isArray(sourceVal)) target[key] = sourceVal.concat(targetVal);
+          }
+        }
+      }
+
+      return target;
+    }
+
+    /**
+     * Creates a base function for methods like `_.forIn` and `_.forOwn`.
+     *
+     * @private
+     * @param {boolean} [fromRight] Specify iterating from right to left.
+     * @returns {Function} Returns the new base function.
+     */
+    function createBaseFor(fromRight) {
+      return function(object, iteratee, keysFunc) {
+        var index = -1,
+            iterable = Object(object),
+            props = keysFunc(object),
+            length = props.length;
+
+        while (length--) {
+          var key = props[fromRight ? length : ++index];
+          if (iteratee(iterable[key], key, iterable) === false) {
+            break;
+          }
+        }
+        return object;
+      };
+    }
+
+    /**
+     * The base implementation of `baseForOwn` which iterates over `object`
+     * properties returned by `keysFunc` and invokes `iteratee` for each property.
+     * Iteratee functions may exit iteration early by explicitly returning `false`.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {Function} keysFunc The function to get the keys of `object`.
+     * @returns {Object} Returns `object`.
+     */
+    var baseFor = createBaseFor();
+
+    /**
+     * The base implementation of `_.forOwn` without support for iteratee shorthands.
+     *
+     * @private
+     * @param {Object} object The object to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @returns {Object} Returns `object`.
+     */
+    function baseForOwn(object, iteratee) {
+      return object && baseFor(object, iteratee, keys);
+    }
+
+    /** Used to stand-in for `undefined` hash values. */
+    var HASH_UNDEFINED$2 = '__lodash_hash_undefined__';
+
+    /**
+     * Adds `value` to the array cache.
+     *
+     * @private
+     * @name add
+     * @memberOf SetCache
+     * @alias push
+     * @param {*} value The value to cache.
+     * @returns {Object} Returns the cache instance.
+     */
+    function setCacheAdd(value) {
+      this.__data__.set(value, HASH_UNDEFINED$2);
+      return this;
+    }
+
+    /**
+     * Checks if `value` is in the array cache.
+     *
+     * @private
+     * @name has
+     * @memberOf SetCache
+     * @param {*} value The value to search for.
+     * @returns {number} Returns `true` if `value` is found, else `false`.
+     */
+    function setCacheHas(value) {
+      return this.__data__.has(value);
+    }
+
+    /**
+     *
+     * Creates an array cache object to store unique values.
+     *
+     * @private
+     * @constructor
+     * @param {Array} [values] The values to cache.
+     */
+    function SetCache(values) {
+      var index = -1,
+          length = values == null ? 0 : values.length;
+
+      this.__data__ = new MapCache;
+      while (++index < length) {
+        this.add(values[index]);
+      }
+    }
+
+    // Add methods to `SetCache`.
+    SetCache.prototype.add = SetCache.prototype.push = setCacheAdd;
+    SetCache.prototype.has = setCacheHas;
+
+    /**
+     * A specialized version of `_.some` for arrays without support for iteratee
+     * shorthands.
+     *
+     * @private
+     * @param {Array} [array] The array to iterate over.
+     * @param {Function} predicate The function invoked per iteration.
+     * @returns {boolean} Returns `true` if any element passes the predicate check,
+     *  else `false`.
+     */
+    function arraySome(array, predicate) {
+      var index = -1,
+          length = array == null ? 0 : array.length;
+
+      while (++index < length) {
+        if (predicate(array[index], index, array)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Checks if a `cache` value for `key` exists.
+     *
+     * @private
+     * @param {Object} cache The cache to query.
+     * @param {string} key The key of the entry to check.
+     * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+     */
+    function cacheHas(cache, key) {
+      return cache.has(key);
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG = 1,
+        COMPARE_UNORDERED_FLAG = 2;
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for arrays with support for
+     * partial deep comparisons.
+     *
+     * @private
+     * @param {Array} array The array to compare.
+     * @param {Array} other The other array to compare.
+     * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
+     * @param {Function} customizer The function to customize comparisons.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Object} stack Tracks traversed `array` and `other` objects.
+     * @returns {boolean} Returns `true` if the arrays are equivalent, else `false`.
+     */
+    function equalArrays(array, other, bitmask, customizer, equalFunc, stack) {
+      var isPartial = bitmask & COMPARE_PARTIAL_FLAG,
+          arrLength = array.length,
+          othLength = other.length;
+
+      if (arrLength != othLength && !(isPartial && othLength > arrLength)) {
+        return false;
+      }
+      // Assume cyclic values are equal.
+      var stacked = stack.get(array);
+      if (stacked && stack.get(other)) {
+        return stacked == other;
+      }
+      var index = -1,
+          result = true,
+          seen = (bitmask & COMPARE_UNORDERED_FLAG) ? new SetCache : undefined;
+
+      stack.set(array, other);
+      stack.set(other, array);
+
+      // Ignore non-index properties.
+      while (++index < arrLength) {
+        var arrValue = array[index],
+            othValue = other[index];
+
+        if (customizer) {
+          var compared = isPartial
+            ? customizer(othValue, arrValue, index, other, array, stack)
+            : customizer(arrValue, othValue, index, array, other, stack);
+        }
+        if (compared !== undefined) {
+          if (compared) {
+            continue;
+          }
+          result = false;
+          break;
+        }
+        // Recursively compare arrays (susceptible to call stack limits).
+        if (seen) {
+          if (!arraySome(other, function(othValue, othIndex) {
+                if (!cacheHas(seen, othIndex) &&
+                    (arrValue === othValue || equalFunc(arrValue, othValue, bitmask, customizer, stack))) {
+                  return seen.push(othIndex);
+                }
+              })) {
+            result = false;
+            break;
+          }
+        } else if (!(
+              arrValue === othValue ||
+                equalFunc(arrValue, othValue, bitmask, customizer, stack)
+            )) {
+          result = false;
+          break;
+        }
+      }
+      stack['delete'](array);
+      stack['delete'](other);
+      return result;
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG$1 = 1,
+        COMPARE_UNORDERED_FLAG$1 = 2;
+
+    /** `Object#toString` result references. */
+    var boolTag$3 = '[object Boolean]',
+        dateTag$3 = '[object Date]',
+        errorTag$2 = '[object Error]',
+        mapTag$6 = '[object Map]',
+        numberTag$3 = '[object Number]',
+        regexpTag$3 = '[object RegExp]',
+        setTag$6 = '[object Set]',
+        stringTag$4 = '[object String]',
+        symbolTag$3 = '[object Symbol]';
+
+    var arrayBufferTag$3 = '[object ArrayBuffer]',
+        dataViewTag$4 = '[object DataView]';
+
+    /** Used to convert symbols to primitives and strings. */
+    var symbolProto$2 = Symbol$1 ? Symbol$1.prototype : undefined,
+        symbolValueOf$1 = symbolProto$2 ? symbolProto$2.valueOf : undefined;
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for comparing objects of
+     * the same `toStringTag`.
+     *
+     * **Note:** This function only supports comparing values with tags of
+     * `Boolean`, `Date`, `Error`, `Number`, `RegExp`, or `String`.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {string} tag The `toStringTag` of the objects to compare.
+     * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
+     * @param {Function} customizer The function to customize comparisons.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Object} stack Tracks traversed `object` and `other` objects.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function equalByTag(object, other, tag, bitmask, customizer, equalFunc, stack) {
+      switch (tag) {
+        case dataViewTag$4:
+          if ((object.byteLength != other.byteLength) ||
+              (object.byteOffset != other.byteOffset)) {
+            return false;
+          }
+          object = object.buffer;
+          other = other.buffer;
+
+        case arrayBufferTag$3:
+          if ((object.byteLength != other.byteLength) ||
+              !equalFunc(new Uint8Array(object), new Uint8Array(other))) {
+            return false;
+          }
+          return true;
+
+        case boolTag$3:
+        case dateTag$3:
+        case numberTag$3:
+          // Coerce booleans to `1` or `0` and dates to milliseconds.
+          // Invalid dates are coerced to `NaN`.
+          return eq(+object, +other);
+
+        case errorTag$2:
+          return object.name == other.name && object.message == other.message;
+
+        case regexpTag$3:
+        case stringTag$4:
+          // Coerce regexes to strings and treat strings, primitives and objects,
+          // as equal. See http://www.ecma-international.org/ecma-262/7.0/#sec-regexp.prototype.tostring
+          // for more details.
+          return object == (other + '');
+
+        case mapTag$6:
+          var convert = mapToArray;
+
+        case setTag$6:
+          var isPartial = bitmask & COMPARE_PARTIAL_FLAG$1;
+          convert || (convert = setToArray);
+
+          if (object.size != other.size && !isPartial) {
+            return false;
+          }
+          // Assume cyclic values are equal.
+          var stacked = stack.get(object);
+          if (stacked) {
+            return stacked == other;
+          }
+          bitmask |= COMPARE_UNORDERED_FLAG$1;
+
+          // Recursively compare objects (susceptible to call stack limits).
+          stack.set(object, other);
+          var result = equalArrays(convert(object), convert(other), bitmask, customizer, equalFunc, stack);
+          stack['delete'](object);
+          return result;
+
+        case symbolTag$3:
+          if (symbolValueOf$1) {
+            return symbolValueOf$1.call(object) == symbolValueOf$1.call(other);
+          }
+      }
+      return false;
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG$2 = 1;
+
+    /** Used for built-in method references. */
+    var objectProto$e = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$c = objectProto$e.hasOwnProperty;
+
+    /**
+     * A specialized version of `baseIsEqualDeep` for objects with support for
+     * partial deep comparisons.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
+     * @param {Function} customizer The function to customize comparisons.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Object} stack Tracks traversed `object` and `other` objects.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function equalObjects(object, other, bitmask, customizer, equalFunc, stack) {
+      var isPartial = bitmask & COMPARE_PARTIAL_FLAG$2,
+          objProps = getAllKeys(object),
+          objLength = objProps.length,
+          othProps = getAllKeys(other),
+          othLength = othProps.length;
+
+      if (objLength != othLength && !isPartial) {
+        return false;
+      }
+      var index = objLength;
+      while (index--) {
+        var key = objProps[index];
+        if (!(isPartial ? key in other : hasOwnProperty$c.call(other, key))) {
+          return false;
+        }
+      }
+      // Assume cyclic values are equal.
+      var stacked = stack.get(object);
+      if (stacked && stack.get(other)) {
+        return stacked == other;
+      }
+      var result = true;
+      stack.set(object, other);
+      stack.set(other, object);
+
+      var skipCtor = isPartial;
+      while (++index < objLength) {
+        key = objProps[index];
+        var objValue = object[key],
+            othValue = other[key];
+
+        if (customizer) {
+          var compared = isPartial
+            ? customizer(othValue, objValue, key, other, object, stack)
+            : customizer(objValue, othValue, key, object, other, stack);
+        }
+        // Recursively compare objects (susceptible to call stack limits).
+        if (!(compared === undefined
+              ? (objValue === othValue || equalFunc(objValue, othValue, bitmask, customizer, stack))
+              : compared
+            )) {
+          result = false;
+          break;
+        }
+        skipCtor || (skipCtor = key == 'constructor');
+      }
+      if (result && !skipCtor) {
+        var objCtor = object.constructor,
+            othCtor = other.constructor;
+
+        // Non `Object` object instances with different constructors are not equal.
+        if (objCtor != othCtor &&
+            ('constructor' in object && 'constructor' in other) &&
+            !(typeof objCtor == 'function' && objCtor instanceof objCtor &&
+              typeof othCtor == 'function' && othCtor instanceof othCtor)) {
+          result = false;
+        }
+      }
+      stack['delete'](object);
+      stack['delete'](other);
+      return result;
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG$3 = 1;
+
+    /** `Object#toString` result references. */
+    var argsTag$3 = '[object Arguments]',
+        arrayTag$2 = '[object Array]',
+        objectTag$3 = '[object Object]';
+
+    /** Used for built-in method references. */
+    var objectProto$f = Object.prototype;
+
+    /** Used to check objects for own properties. */
+    var hasOwnProperty$d = objectProto$f.hasOwnProperty;
+
+    /**
+     * A specialized version of `baseIsEqual` for arrays and objects which performs
+     * deep comparisons and tracks traversed objects enabling objects with circular
+     * references to be compared.
+     *
+     * @private
+     * @param {Object} object The object to compare.
+     * @param {Object} other The other object to compare.
+     * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
+     * @param {Function} customizer The function to customize comparisons.
+     * @param {Function} equalFunc The function to determine equivalents of values.
+     * @param {Object} [stack] Tracks traversed `object` and `other` objects.
+     * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
+     */
+    function baseIsEqualDeep(object, other, bitmask, customizer, equalFunc, stack) {
+      var objIsArr = isArray(object),
+          othIsArr = isArray(other),
+          objTag = objIsArr ? arrayTag$2 : getTag$1(object),
+          othTag = othIsArr ? arrayTag$2 : getTag$1(other);
+
+      objTag = objTag == argsTag$3 ? objectTag$3 : objTag;
+      othTag = othTag == argsTag$3 ? objectTag$3 : othTag;
+
+      var objIsObj = objTag == objectTag$3,
+          othIsObj = othTag == objectTag$3,
+          isSameTag = objTag == othTag;
+
+      if (isSameTag && isBuffer(object)) {
+        if (!isBuffer(other)) {
+          return false;
+        }
+        objIsArr = true;
+        objIsObj = false;
+      }
+      if (isSameTag && !objIsObj) {
+        stack || (stack = new Stack);
+        return (objIsArr || isTypedArray(object))
+          ? equalArrays(object, other, bitmask, customizer, equalFunc, stack)
+          : equalByTag(object, other, objTag, bitmask, customizer, equalFunc, stack);
+      }
+      if (!(bitmask & COMPARE_PARTIAL_FLAG$3)) {
+        var objIsWrapped = objIsObj && hasOwnProperty$d.call(object, '__wrapped__'),
+            othIsWrapped = othIsObj && hasOwnProperty$d.call(other, '__wrapped__');
+
+        if (objIsWrapped || othIsWrapped) {
+          var objUnwrapped = objIsWrapped ? object.value() : object,
+              othUnwrapped = othIsWrapped ? other.value() : other;
+
+          stack || (stack = new Stack);
+          return equalFunc(objUnwrapped, othUnwrapped, bitmask, customizer, stack);
+        }
+      }
+      if (!isSameTag) {
+        return false;
+      }
+      stack || (stack = new Stack);
+      return equalObjects(object, other, bitmask, customizer, equalFunc, stack);
+    }
+
+    /**
+     * The base implementation of `_.isEqual` which supports partial comparisons
+     * and tracks traversed objects.
+     *
+     * @private
+     * @param {*} value The value to compare.
+     * @param {*} other The other value to compare.
+     * @param {boolean} bitmask The bitmask flags.
+     *  1 - Unordered comparison
+     *  2 - Partial comparison
+     * @param {Function} [customizer] The function to customize comparisons.
+     * @param {Object} [stack] Tracks traversed `value` and `other` objects.
+     * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
+     */
+    function baseIsEqual(value, other, bitmask, customizer, stack) {
+      if (value === other) {
+        return true;
+      }
+      if (value == null || other == null || (!isObjectLike(value) && !isObjectLike(other))) {
+        return value !== value && other !== other;
+      }
+      return baseIsEqualDeep(value, other, bitmask, customizer, baseIsEqual, stack);
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG$4 = 1,
+        COMPARE_UNORDERED_FLAG$2 = 2;
+
+    /**
+     * The base implementation of `_.isMatch` without support for iteratee shorthands.
+     *
+     * @private
+     * @param {Object} object The object to inspect.
+     * @param {Object} source The object of property values to match.
+     * @param {Array} matchData The property names, values, and compare flags to match.
+     * @param {Function} [customizer] The function to customize comparisons.
+     * @returns {boolean} Returns `true` if `object` is a match, else `false`.
+     */
+    function baseIsMatch(object, source, matchData, customizer) {
+      var index = matchData.length,
+          length = index,
+          noCustomizer = !customizer;
+
+      if (object == null) {
+        return !length;
+      }
+      object = Object(object);
+      while (index--) {
+        var data = matchData[index];
+        if ((noCustomizer && data[2])
+              ? data[1] !== object[data[0]]
+              : !(data[0] in object)
+            ) {
+          return false;
+        }
+      }
+      while (++index < length) {
+        data = matchData[index];
+        var key = data[0],
+            objValue = object[key],
+            srcValue = data[1];
+
+        if (noCustomizer && data[2]) {
+          if (objValue === undefined && !(key in object)) {
+            return false;
+          }
+        } else {
+          var stack = new Stack;
+          if (customizer) {
+            var result = customizer(objValue, srcValue, key, object, source, stack);
+          }
+          if (!(result === undefined
+                ? baseIsEqual(srcValue, objValue, COMPARE_PARTIAL_FLAG$4 | COMPARE_UNORDERED_FLAG$2, customizer, stack)
+                : result
+              )) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Checks if `value` is suitable for strict equality comparisons, i.e. `===`.
+     *
+     * @private
+     * @param {*} value The value to check.
+     * @returns {boolean} Returns `true` if `value` if suitable for strict
+     *  equality comparisons, else `false`.
+     */
+    function isStrictComparable(value) {
+      return value === value && !isObject(value);
+    }
+
+    /**
+     * Gets the property names, values, and compare flags of `object`.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Array} Returns the match data of `object`.
+     */
+    function getMatchData(object) {
+      var result = keys(object),
+          length = result.length;
+
+      while (length--) {
+        var key = result[length],
+            value = object[key];
+
+        result[length] = [key, value, isStrictComparable(value)];
+      }
+      return result;
+    }
+
+    /**
+     * A specialized version of `matchesProperty` for source values suitable
+     * for strict equality comparisons, i.e. `===`.
+     *
+     * @private
+     * @param {string} key The key of the property to get.
+     * @param {*} srcValue The value to match.
+     * @returns {Function} Returns the new spec function.
+     */
+    function matchesStrictComparable(key, srcValue) {
+      return function(object) {
+        if (object == null) {
+          return false;
+        }
+        return object[key] === srcValue &&
+          (srcValue !== undefined || (key in Object(object)));
+      };
+    }
+
+    /**
+     * The base implementation of `_.matches` which doesn't clone `source`.
+     *
+     * @private
+     * @param {Object} source The object of property values to match.
+     * @returns {Function} Returns the new spec function.
+     */
+    function baseMatches(source) {
+      var matchData = getMatchData(source);
+      if (matchData.length == 1 && matchData[0][2]) {
+        return matchesStrictComparable(matchData[0][0], matchData[0][1]);
+      }
+      return function(object) {
+        return object === source || baseIsMatch(object, source, matchData);
+      };
     }
 
     /**
@@ -10153,622 +13250,3111 @@ var app = (function (L) {
       return result === undefined ? defaultValue : result;
     }
 
-    function createObjectWithDefaultValue(defaultValue = '') {
-      return new Proxy(
-        {},
-        {
-          get: function(object, property) {
-            return Object.prototype.hasOwnProperty.call(object, property)
-              ? object[property]
-              : defaultValue;
-          },
+    /**
+     * The base implementation of `_.hasIn` without support for deep paths.
+     *
+     * @private
+     * @param {Object} [object] The object to query.
+     * @param {Array|string} key The key to check.
+     * @returns {boolean} Returns `true` if `key` exists, else `false`.
+     */
+    function baseHasIn(object, key) {
+      return object != null && key in Object(object);
+    }
+
+    /**
+     * Checks if `path` is a direct or inherited property of `object`.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category Object
+     * @param {Object} object The object to query.
+     * @param {Array|string} path The path to check.
+     * @returns {boolean} Returns `true` if `path` exists, else `false`.
+     * @example
+     *
+     * var object = _.create({ 'a': _.create({ 'b': 2 }) });
+     *
+     * _.hasIn(object, 'a');
+     * // => true
+     *
+     * _.hasIn(object, 'a.b');
+     * // => true
+     *
+     * _.hasIn(object, ['a', 'b']);
+     * // => true
+     *
+     * _.hasIn(object, 'b');
+     * // => false
+     */
+    function hasIn(object, path) {
+      return object != null && hasPath(object, path, baseHasIn);
+    }
+
+    /** Used to compose bitmasks for value comparisons. */
+    var COMPARE_PARTIAL_FLAG$5 = 1,
+        COMPARE_UNORDERED_FLAG$3 = 2;
+
+    /**
+     * The base implementation of `_.matchesProperty` which doesn't clone `srcValue`.
+     *
+     * @private
+     * @param {string} path The path of the property to get.
+     * @param {*} srcValue The value to match.
+     * @returns {Function} Returns the new spec function.
+     */
+    function baseMatchesProperty(path, srcValue) {
+      if (isKey(path) && isStrictComparable(srcValue)) {
+        return matchesStrictComparable(toKey(path), srcValue);
+      }
+      return function(object) {
+        var objValue = get(object, path);
+        return (objValue === undefined && objValue === srcValue)
+          ? hasIn(object, path)
+          : baseIsEqual(srcValue, objValue, COMPARE_PARTIAL_FLAG$5 | COMPARE_UNORDERED_FLAG$3);
+      };
+    }
+
+    /**
+     * This method returns the first argument it receives.
+     *
+     * @static
+     * @since 0.1.0
+     * @memberOf _
+     * @category Util
+     * @param {*} value Any value.
+     * @returns {*} Returns `value`.
+     * @example
+     *
+     * var object = { 'a': 1 };
+     *
+     * console.log(_.identity(object) === object);
+     * // => true
+     */
+    function identity(value) {
+      return value;
+    }
+
+    /**
+     * The base implementation of `_.property` without support for deep paths.
+     *
+     * @private
+     * @param {string} key The key of the property to get.
+     * @returns {Function} Returns the new accessor function.
+     */
+    function baseProperty(key) {
+      return function(object) {
+        return object == null ? undefined : object[key];
+      };
+    }
+
+    /**
+     * A specialized version of `baseProperty` which supports deep paths.
+     *
+     * @private
+     * @param {Array|string} path The path of the property to get.
+     * @returns {Function} Returns the new accessor function.
+     */
+    function basePropertyDeep(path) {
+      return function(object) {
+        return baseGet(object, path);
+      };
+    }
+
+    /**
+     * Creates a function that returns the value at `path` of a given object.
+     *
+     * @static
+     * @memberOf _
+     * @since 2.4.0
+     * @category Util
+     * @param {Array|string} path The path of the property to get.
+     * @returns {Function} Returns the new accessor function.
+     * @example
+     *
+     * var objects = [
+     *   { 'a': { 'b': 2 } },
+     *   { 'a': { 'b': 1 } }
+     * ];
+     *
+     * _.map(objects, _.property('a.b'));
+     * // => [2, 1]
+     *
+     * _.map(_.sortBy(objects, _.property(['a', 'b'])), 'a.b');
+     * // => [1, 2]
+     */
+    function property(path) {
+      return isKey(path) ? baseProperty(toKey(path)) : basePropertyDeep(path);
+    }
+
+    /**
+     * The base implementation of `_.iteratee`.
+     *
+     * @private
+     * @param {*} [value=_.identity] The value to convert to an iteratee.
+     * @returns {Function} Returns the iteratee.
+     */
+    function baseIteratee(value) {
+      // Don't store the `typeof` result in a variable to avoid a JIT bug in Safari 9.
+      // See https://bugs.webkit.org/show_bug.cgi?id=156034 for more details.
+      if (typeof value == 'function') {
+        return value;
+      }
+      if (value == null) {
+        return identity;
+      }
+      if (typeof value == 'object') {
+        return isArray(value)
+          ? baseMatchesProperty(value[0], value[1])
+          : baseMatches(value);
+      }
+      return property(value);
+    }
+
+    /**
+     * Creates an object with the same keys as `object` and values generated
+     * by running each own enumerable string keyed property of `object` thru
+     * `iteratee`. The iteratee is invoked with three arguments:
+     * (value, key, object).
+     *
+     * @static
+     * @memberOf _
+     * @since 2.4.0
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @returns {Object} Returns the new mapped object.
+     * @see _.mapKeys
+     * @example
+     *
+     * var users = {
+     *   'fred':    { 'user': 'fred',    'age': 40 },
+     *   'pebbles': { 'user': 'pebbles', 'age': 1 }
+     * };
+     *
+     * _.mapValues(users, function(o) { return o.age; });
+     * // => { 'fred': 40, 'pebbles': 1 } (iteration order is not guaranteed)
+     *
+     * // The `_.property` iteratee shorthand.
+     * _.mapValues(users, 'age');
+     * // => { 'fred': 40, 'pebbles': 1 } (iteration order is not guaranteed)
+     */
+    function mapValues(object, iteratee) {
+      var result = {};
+      iteratee = baseIteratee(iteratee);
+
+      baseForOwn(object, function(value, key, object) {
+        baseAssignValue(result, key, iteratee(value, key, object));
+      });
+      return result;
+    }
+
+    /**
+     * Based on Kendo UI Core expression code <https://github.com/telerik/kendo-ui-core#license-information>
+     */
+
+    function Cache(maxSize) {
+      this._maxSize = maxSize;
+      this.clear();
+    }
+    Cache.prototype.clear = function() {
+      this._size = 0;
+      this._values = Object.create(null);
+    };
+    Cache.prototype.get = function(key) {
+      return this._values[key]
+    };
+    Cache.prototype.set = function(key, value) {
+      this._size >= this._maxSize && this.clear();
+      if (!(key in this._values)) this._size++;
+
+      return (this._values[key] = value)
+    };
+
+    var SPLIT_REGEX = /[^.^\]^[]+|(?=\[\]|\.\.)/g,
+      DIGIT_REGEX = /^\d+$/,
+      LEAD_DIGIT_REGEX = /^\d/,
+      SPEC_CHAR_REGEX = /[~`!#$%\^&*+=\-\[\]\\';,/{}|\\":<>\?]/g,
+      CLEAN_QUOTES_REGEX = /^\s*(['"]?)(.*?)(\1)\s*$/,
+      MAX_CACHE_SIZE = 512;
+
+    var pathCache = new Cache(MAX_CACHE_SIZE),
+      setCache = new Cache(MAX_CACHE_SIZE),
+      getCache = new Cache(MAX_CACHE_SIZE);
+
+    var propertyExpr = {
+      Cache: Cache,
+
+      split: split,
+
+      normalizePath: normalizePath,
+
+      setter: function(path) {
+        var parts = normalizePath(path);
+
+        return (
+          setCache.get(path) ||
+          setCache.set(path, function setter(data, value) {
+            var index = 0,
+              len = parts.length;
+            while (index < len - 1) {
+              data = data[parts[index++]];
+            }
+            data[parts[index]] = value;
+          })
+        )
+      },
+
+      getter: function(path, safe) {
+        var parts = normalizePath(path);
+        return (
+          getCache.get(path) ||
+          getCache.set(path, function getter(data) {
+            var index = 0,
+              len = parts.length;
+            while (index < len) {
+              if (data != null || !safe) data = data[parts[index++]];
+              else return
+            }
+            return data
+          })
+        )
+      },
+
+      join: function(segments) {
+        return segments.reduce(function(path, part) {
+          return (
+            path +
+            (isQuoted(part) || DIGIT_REGEX.test(part)
+              ? '[' + part + ']'
+              : (path ? '.' : '') + part)
+          )
+        }, '')
+      },
+
+      forEach: function(path, cb, thisArg) {
+        forEach(Array.isArray(path) ? path : split(path), cb, thisArg);
+      }
+    };
+
+    function normalizePath(path) {
+      return (
+        pathCache.get(path) ||
+        pathCache.set(
+          path,
+          split(path).map(function(part) {
+            return part.replace(CLEAN_QUOTES_REGEX, '$2')
+          })
+        )
+      )
+    }
+
+    function split(path) {
+      return path.match(SPLIT_REGEX)
+    }
+
+    function forEach(parts, iter, thisArg) {
+      var len = parts.length,
+        part,
+        idx,
+        isArray,
+        isBracket;
+
+      for (idx = 0; idx < len; idx++) {
+        part = parts[idx];
+
+        if (part) {
+          if (shouldBeQuoted(part)) {
+            part = '"' + part + '"';
+          }
+
+          isBracket = isQuoted(part);
+          isArray = !isBracket && /^\d+$/.test(part);
+
+          iter.call(thisArg, part, isBracket, isArray, idx, parts);
         }
-      );
+      }
     }
 
-    function deepCopy(src) {
-      return JSON.parse(JSON.stringify(src));
+    function isQuoted(str) {
+      return (
+        typeof str === 'string' && str && ["'", '"'].indexOf(str.charAt(0)) !== -1
+      )
     }
 
-    /* home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Form.svelte generated by Svelte v3.24.1 */
-    const file$b = "home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Form.svelte";
+    function hasLeadingNumber(part) {
+      return part.match(LEAD_DIGIT_REGEX) && !part.match(DIGIT_REGEX)
+    }
 
-    const get_default_slot_changes$1 = dirty => ({
-    	isSubmitting: dirty & /*$isSubmitting*/ 32,
-    	isValid: dirty & /*isValid*/ 1,
-    	values: dirty & /*$values*/ 4,
-    	errors: dirty & /*$errors*/ 16,
-    	touched: dirty & /*$touched*/ 8
+    function hasSpecialChars(part) {
+      return SPEC_CHAR_REGEX.test(part)
+    }
+
+    function shouldBeQuoted(part) {
+      return !isQuoted(part) && (hasLeadingNumber(part) || hasSpecialChars(part))
+    }
+
+    var prefixes = {
+      context: '$',
+      value: '.'
+    };
+
+    var Reference = /*#__PURE__*/function () {
+      function Reference(key, options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        if (typeof key !== 'string') throw new TypeError('ref must be a string, got: ' + key);
+        this.key = key.trim();
+        if (key === '') throw new TypeError('ref must be a non-empty string');
+        this.isContext = this.key[0] === prefixes.context;
+        this.isValue = this.key[0] === prefixes.value;
+        this.isSibling = !this.isContext && !this.isValue;
+        var prefix = this.isContext ? prefixes.context : this.isValue ? prefixes.value : '';
+        this.path = this.key.slice(prefix.length);
+        this.getter = this.path && propertyExpr.getter(this.path, true);
+        this.map = options.map;
+      }
+
+      var _proto = Reference.prototype;
+
+      _proto.getValue = function getValue(options) {
+        var result = this.isContext ? options.context : this.isValue ? options.value : options.parent;
+        if (this.getter) result = this.getter(result || {});
+        if (this.map) result = this.map(result);
+        return result;
+      };
+
+      _proto.cast = function cast(value, options) {
+        return this.getValue(_extends({}, options, {
+          value: value
+        }));
+      };
+
+      _proto.resolve = function resolve() {
+        return this;
+      };
+
+      _proto.describe = function describe() {
+        return {
+          type: 'ref',
+          key: this.key
+        };
+      };
+
+      _proto.toString = function toString() {
+        return "Ref(" + this.key + ")";
+      };
+
+      Reference.isRef = function isRef(value) {
+        return value && value.__isYupRef;
+      };
+
+      return Reference;
+    }();
+    Reference.prototype.__isYupRef = true;
+
+    var formatError = ValidationError.formatError;
+
+    var thenable = function thenable(p) {
+      return p && typeof p.then === 'function' && typeof p.catch === 'function';
+    };
+
+    function runTest(testFn, ctx, value, sync) {
+      var result = testFn.call(ctx, value);
+      if (!sync) return Promise.resolve(result);
+
+      if (thenable(result)) {
+        throw new Error("Validation test of type: \"" + ctx.type + "\" returned a Promise during a synchronous validate. " + "This test will finish after the validate call has returned");
+      }
+
+      return synchronousPromise.SynchronousPromise.resolve(result);
+    }
+
+    function resolveParams(oldParams, newParams, resolve) {
+      return mapValues(_extends({}, oldParams, newParams), resolve);
+    }
+
+    function createErrorFactory(_ref) {
+      var value = _ref.value,
+          label = _ref.label,
+          resolve = _ref.resolve,
+          originalValue = _ref.originalValue,
+          opts = _objectWithoutPropertiesLoose(_ref, ["value", "label", "resolve", "originalValue"]);
+
+      return function createError(_temp) {
+        var _ref2 = _temp === void 0 ? {} : _temp,
+            _ref2$path = _ref2.path,
+            path = _ref2$path === void 0 ? opts.path : _ref2$path,
+            _ref2$message = _ref2.message,
+            message = _ref2$message === void 0 ? opts.message : _ref2$message,
+            _ref2$type = _ref2.type,
+            type = _ref2$type === void 0 ? opts.name : _ref2$type,
+            params = _ref2.params;
+
+        params = _extends({
+          path: path,
+          value: value,
+          originalValue: originalValue,
+          label: label
+        }, resolveParams(opts.params, params, resolve));
+        return _extends(new ValidationError(formatError(message, params), value, path, type), {
+          params: params
+        });
+      };
+    }
+    function createValidation(options) {
+      var name = options.name,
+          message = options.message,
+          test = options.test,
+          params = options.params;
+
+      function validate(_ref3) {
+        var value = _ref3.value,
+            path = _ref3.path,
+            label = _ref3.label,
+            options = _ref3.options,
+            originalValue = _ref3.originalValue,
+            sync = _ref3.sync,
+            rest = _objectWithoutPropertiesLoose(_ref3, ["value", "path", "label", "options", "originalValue", "sync"]);
+
+        var parent = options.parent;
+
+        var resolve = function resolve(item) {
+          return Reference.isRef(item) ? item.getValue({
+            value: value,
+            parent: parent,
+            context: options.context
+          }) : item;
+        };
+
+        var createError = createErrorFactory({
+          message: message,
+          path: path,
+          value: value,
+          originalValue: originalValue,
+          params: params,
+          label: label,
+          resolve: resolve,
+          name: name
+        });
+
+        var ctx = _extends({
+          path: path,
+          parent: parent,
+          type: name,
+          createError: createError,
+          resolve: resolve,
+          options: options
+        }, rest);
+
+        return runTest(test, ctx, value, sync).then(function (validOrError) {
+          if (ValidationError.isError(validOrError)) throw validOrError;else if (!validOrError) throw createError();
+        });
+      }
+
+      validate.OPTIONS = options;
+      return validate;
+    }
+
+    var trim = function trim(part) {
+      return part.substr(0, part.length - 1).substr(1);
+    };
+
+    function getIn(schema, path, value, context) {
+      if (context === void 0) {
+        context = value;
+      }
+
+      var parent, lastPart, lastPartDebug; // root path: ''
+
+      if (!path) return {
+        parent: parent,
+        parentPath: path,
+        schema: schema
+      };
+      propertyExpr.forEach(path, function (_part, isBracket, isArray) {
+        var part = isBracket ? trim(_part) : _part;
+        schema = schema.resolve({
+          context: context,
+          parent: parent,
+          value: value
+        });
+
+        if (schema.innerType) {
+          var idx = isArray ? parseInt(part, 10) : 0;
+
+          if (value && idx >= value.length) {
+            throw new Error("Yup.reach cannot resolve an array item at index: " + _part + ", in the path: " + path + ". " + "because there is no value at that index. ");
+          }
+
+          parent = value;
+          value = value && value[idx];
+          schema = schema.innerType;
+        } // sometimes the array index part of a path doesn't exist: "nested.arr.child"
+        // in these cases the current part is the next schema and should be processed
+        // in this iteration. For cases where the index signature is included this
+        // check will fail and we'll handle the `child` part on the next iteration like normal
+
+
+        if (!isArray) {
+          if (!schema.fields || !schema.fields[part]) throw new Error("The schema does not contain the path: " + path + ". " + ("(failed at: " + lastPartDebug + " which is a type: \"" + schema._type + "\")"));
+          parent = value;
+          value = value && value[part];
+          schema = schema.fields[part];
+        }
+
+        lastPart = part;
+        lastPartDebug = isBracket ? '[' + _part + ']' : '.' + _part;
+      });
+      return {
+        schema: schema,
+        parent: parent,
+        parentPath: lastPart
+      };
+    }
+
+    function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } it = o[Symbol.iterator](); return it.next.bind(it); }
+
+    function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+    function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+    var RefSet = /*#__PURE__*/function () {
+      function RefSet() {
+        this.list = new Set();
+        this.refs = new Map();
+      }
+
+      var _proto = RefSet.prototype;
+
+      _proto.describe = function describe() {
+        var description = [];
+
+        for (var _iterator = _createForOfIteratorHelperLoose(this.list), _step; !(_step = _iterator()).done;) {
+          var item = _step.value;
+          description.push(item);
+        }
+
+        for (var _iterator2 = _createForOfIteratorHelperLoose(this.refs), _step2; !(_step2 = _iterator2()).done;) {
+          var _step2$value = _step2.value,
+              ref = _step2$value[1];
+          description.push(ref.describe());
+        }
+
+        return description;
+      };
+
+      _proto.toArray = function toArray$1() {
+        return toArray(this.list).concat(toArray(this.refs.values()));
+      };
+
+      _proto.add = function add(value) {
+        Reference.isRef(value) ? this.refs.set(value.key, value) : this.list.add(value);
+      };
+
+      _proto.delete = function _delete(value) {
+        Reference.isRef(value) ? this.refs.delete(value.key) : this.list.delete(value);
+      };
+
+      _proto.has = function has(value, resolve) {
+        if (this.list.has(value)) return true;
+        var item,
+            values = this.refs.values();
+
+        while (item = values.next(), !item.done) {
+          if (resolve(item.value) === value) return true;
+        }
+
+        return false;
+      };
+
+      _proto.clone = function clone() {
+        var next = new RefSet();
+        next.list = new Set(this.list);
+        next.refs = new Map(this.refs);
+        return next;
+      };
+
+      _proto.merge = function merge(newItems, removeItems) {
+        var next = this.clone();
+        newItems.list.forEach(function (value) {
+          return next.add(value);
+        });
+        newItems.refs.forEach(function (value) {
+          return next.add(value);
+        });
+        removeItems.list.forEach(function (value) {
+          return next.delete(value);
+        });
+        removeItems.refs.forEach(function (value) {
+          return next.delete(value);
+        });
+        return next;
+      };
+
+      _createClass(RefSet, [{
+        key: "size",
+        get: function get() {
+          return this.list.size + this.refs.size;
+        }
+      }]);
+
+      return RefSet;
+    }();
+
+    function SchemaType(options) {
+      var _this = this;
+
+      if (options === void 0) {
+        options = {};
+      }
+
+      if (!(this instanceof SchemaType)) return new SchemaType();
+      this._deps = [];
+      this._conditions = [];
+      this._options = {
+        abortEarly: true,
+        recursive: true
+      };
+      this._exclusive = Object.create(null);
+      this._whitelist = new RefSet();
+      this._blacklist = new RefSet();
+      this.tests = [];
+      this.transforms = [];
+      this.withMutation(function () {
+        _this.typeError(mixed.notType);
+      });
+      if (has(options, 'default')) this._defaultDefault = options.default;
+      this.type = options.type || 'mixed'; // TODO: remove
+
+      this._type = options.type || 'mixed';
+    }
+    var proto = SchemaType.prototype = {
+      __isYupSchema__: true,
+      constructor: SchemaType,
+      clone: function clone() {
+        var _this2 = this;
+
+        if (this._mutate) return this; // if the nested value is a schema we can skip cloning, since
+        // they are already immutable
+
+        return cloneDeepWith(this, function (value) {
+          if (isSchema(value) && value !== _this2) return value;
+        });
+      },
+      label: function label(_label) {
+        var next = this.clone();
+        next._label = _label;
+        return next;
+      },
+      meta: function meta(obj) {
+        if (arguments.length === 0) return this._meta;
+        var next = this.clone();
+        next._meta = _extends(next._meta || {}, obj);
+        return next;
+      },
+      withMutation: function withMutation(fn) {
+        var before = this._mutate;
+        this._mutate = true;
+        var result = fn(this);
+        this._mutate = before;
+        return result;
+      },
+      concat: function concat(schema) {
+        if (!schema || schema === this) return this;
+        if (schema._type !== this._type && this._type !== 'mixed') throw new TypeError("You cannot `concat()` schema's of different types: " + this._type + " and " + schema._type);
+        var next = prependDeep(schema.clone(), this); // new undefined default is overridden by old non-undefined one, revert
+
+        if (has(schema, '_default')) next._default = schema._default;
+        next.tests = this.tests;
+        next._exclusive = this._exclusive; // manually merge the blacklist/whitelist (the other `schema` takes
+        // precedence in case of conflicts)
+
+        next._whitelist = this._whitelist.merge(schema._whitelist, schema._blacklist);
+        next._blacklist = this._blacklist.merge(schema._blacklist, schema._whitelist); // manually add the new tests to ensure
+        // the deduping logic is consistent
+
+        next.withMutation(function (next) {
+          schema.tests.forEach(function (fn) {
+            next.test(fn.OPTIONS);
+          });
+        });
+        return next;
+      },
+      isType: function isType(v) {
+        if (this._nullable && v === null) return true;
+        return !this._typeCheck || this._typeCheck(v);
+      },
+      resolve: function resolve(options) {
+        var schema = this;
+
+        if (schema._conditions.length) {
+          var conditions = schema._conditions;
+          schema = schema.clone();
+          schema._conditions = [];
+          schema = conditions.reduce(function (schema, condition) {
+            return condition.resolve(schema, options);
+          }, schema);
+          schema = schema.resolve(options);
+        }
+
+        return schema;
+      },
+      cast: function cast(value, options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        var resolvedSchema = this.resolve(_extends({}, options, {
+          value: value
+        }));
+
+        var result = resolvedSchema._cast(value, options);
+
+        if (value !== undefined && options.assert !== false && resolvedSchema.isType(result) !== true) {
+          var formattedValue = printValue(value);
+          var formattedResult = printValue(result);
+          throw new TypeError("The value of " + (options.path || 'field') + " could not be cast to a value " + ("that satisfies the schema type: \"" + resolvedSchema._type + "\". \n\n") + ("attempted value: " + formattedValue + " \n") + (formattedResult !== formattedValue ? "result of cast: " + formattedResult : ''));
+        }
+
+        return result;
+      },
+      _cast: function _cast(rawValue) {
+        var _this3 = this;
+
+        var value = rawValue === undefined ? rawValue : this.transforms.reduce(function (value, fn) {
+          return fn.call(_this3, value, rawValue);
+        }, rawValue);
+
+        if (value === undefined && has(this, '_default')) {
+          value = this.default();
+        }
+
+        return value;
+      },
+      _validate: function _validate(_value, options) {
+        var _this4 = this;
+
+        if (options === void 0) {
+          options = {};
+        }
+
+        var value = _value;
+        var originalValue = options.originalValue != null ? options.originalValue : _value;
+
+        var isStrict = this._option('strict', options);
+
+        var endEarly = this._option('abortEarly', options);
+
+        var sync = options.sync;
+        var path = options.path;
+        var label = this._label;
+
+        if (!isStrict) {
+          value = this._cast(value, _extends({
+            assert: false
+          }, options));
+        } // value is cast, we can check if it meets type requirements
+
+
+        var validationParams = {
+          value: value,
+          path: path,
+          schema: this,
+          options: options,
+          label: label,
+          originalValue: originalValue,
+          sync: sync
+        };
+
+        if (options.from) {
+          validationParams.from = options.from;
+        }
+
+        var initialTests = [];
+        if (this._typeError) initialTests.push(this._typeError(validationParams));
+        if (this._whitelistError) initialTests.push(this._whitelistError(validationParams));
+        if (this._blacklistError) initialTests.push(this._blacklistError(validationParams));
+        return runValidations({
+          validations: initialTests,
+          endEarly: endEarly,
+          value: value,
+          path: path,
+          sync: sync
+        }).then(function (value) {
+          return runValidations({
+            path: path,
+            sync: sync,
+            value: value,
+            endEarly: endEarly,
+            validations: _this4.tests.map(function (fn) {
+              return fn(validationParams);
+            })
+          });
+        });
+      },
+      validate: function validate(value, options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        var schema = this.resolve(_extends({}, options, {
+          value: value
+        }));
+        return schema._validate(value, options);
+      },
+      validateSync: function validateSync(value, options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        var schema = this.resolve(_extends({}, options, {
+          value: value
+        }));
+        var result, err;
+
+        schema._validate(value, _extends({}, options, {
+          sync: true
+        })).then(function (r) {
+          return result = r;
+        }).catch(function (e) {
+          return err = e;
+        });
+
+        if (err) throw err;
+        return result;
+      },
+      isValid: function isValid(value, options) {
+        return this.validate(value, options).then(function () {
+          return true;
+        }).catch(function (err) {
+          if (err.name === 'ValidationError') return false;
+          throw err;
+        });
+      },
+      isValidSync: function isValidSync(value, options) {
+        try {
+          this.validateSync(value, options);
+          return true;
+        } catch (err) {
+          if (err.name === 'ValidationError') return false;
+          throw err;
+        }
+      },
+      getDefault: function getDefault(options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        var schema = this.resolve(options);
+        return schema.default();
+      },
+      default: function _default(def) {
+        if (arguments.length === 0) {
+          var defaultValue = has(this, '_default') ? this._default : this._defaultDefault;
+          return typeof defaultValue === 'function' ? defaultValue.call(this) : cloneDeepWith(defaultValue);
+        }
+
+        var next = this.clone();
+        next._default = def;
+        return next;
+      },
+      strict: function strict(isStrict) {
+        if (isStrict === void 0) {
+          isStrict = true;
+        }
+
+        var next = this.clone();
+        next._options.strict = isStrict;
+        return next;
+      },
+      _isPresent: function _isPresent(value) {
+        return value != null;
+      },
+      required: function required(message) {
+        if (message === void 0) {
+          message = mixed.required;
+        }
+
+        return this.test({
+          message: message,
+          name: 'required',
+          exclusive: true,
+          test: function test(value) {
+            return this.schema._isPresent(value);
+          }
+        });
+      },
+      notRequired: function notRequired() {
+        var next = this.clone();
+        next.tests = next.tests.filter(function (test) {
+          return test.OPTIONS.name !== 'required';
+        });
+        return next;
+      },
+      nullable: function nullable(isNullable) {
+        if (isNullable === void 0) {
+          isNullable = true;
+        }
+
+        var next = this.clone();
+        next._nullable = isNullable;
+        return next;
+      },
+      transform: function transform(fn) {
+        var next = this.clone();
+        next.transforms.push(fn);
+        return next;
+      },
+
+      /**
+       * Adds a test function to the schema's queue of tests.
+       * tests can be exclusive or non-exclusive.
+       *
+       * - exclusive tests, will replace any existing tests of the same name.
+       * - non-exclusive: can be stacked
+       *
+       * If a non-exclusive test is added to a schema with an exclusive test of the same name
+       * the exclusive test is removed and further tests of the same name will be stacked.
+       *
+       * If an exclusive test is added to a schema with non-exclusive tests of the same name
+       * the previous tests are removed and further tests of the same name will replace each other.
+       */
+      test: function test() {
+        var opts;
+
+        if (arguments.length === 1) {
+          if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === 'function') {
+            opts = {
+              test: arguments.length <= 0 ? undefined : arguments[0]
+            };
+          } else {
+            opts = arguments.length <= 0 ? undefined : arguments[0];
+          }
+        } else if (arguments.length === 2) {
+          opts = {
+            name: arguments.length <= 0 ? undefined : arguments[0],
+            test: arguments.length <= 1 ? undefined : arguments[1]
+          };
+        } else {
+          opts = {
+            name: arguments.length <= 0 ? undefined : arguments[0],
+            message: arguments.length <= 1 ? undefined : arguments[1],
+            test: arguments.length <= 2 ? undefined : arguments[2]
+          };
+        }
+
+        if (opts.message === undefined) opts.message = mixed.default;
+        if (typeof opts.test !== 'function') throw new TypeError('`test` is a required parameters');
+        var next = this.clone();
+        var validate = createValidation(opts);
+        var isExclusive = opts.exclusive || opts.name && next._exclusive[opts.name] === true;
+
+        if (opts.exclusive && !opts.name) {
+          throw new TypeError('Exclusive tests must provide a unique `name` identifying the test');
+        }
+
+        next._exclusive[opts.name] = !!opts.exclusive;
+        next.tests = next.tests.filter(function (fn) {
+          if (fn.OPTIONS.name === opts.name) {
+            if (isExclusive) return false;
+            if (fn.OPTIONS.test === validate.OPTIONS.test) return false;
+          }
+
+          return true;
+        });
+        next.tests.push(validate);
+        return next;
+      },
+      when: function when(keys, options) {
+        if (arguments.length === 1) {
+          options = keys;
+          keys = '.';
+        }
+
+        var next = this.clone(),
+            deps = [].concat(keys).map(function (key) {
+          return new Reference(key);
+        });
+        deps.forEach(function (dep) {
+          if (dep.isSibling) next._deps.push(dep.key);
+        });
+
+        next._conditions.push(new Condition(deps, options));
+
+        return next;
+      },
+      typeError: function typeError(message) {
+        var next = this.clone();
+        next._typeError = createValidation({
+          message: message,
+          name: 'typeError',
+          test: function test(value) {
+            if (value !== undefined && !this.schema.isType(value)) return this.createError({
+              params: {
+                type: this.schema._type
+              }
+            });
+            return true;
+          }
+        });
+        return next;
+      },
+      oneOf: function oneOf(enums, message) {
+        if (message === void 0) {
+          message = mixed.oneOf;
+        }
+
+        var next = this.clone();
+        enums.forEach(function (val) {
+          next._whitelist.add(val);
+
+          next._blacklist.delete(val);
+        });
+        next._whitelistError = createValidation({
+          message: message,
+          name: 'oneOf',
+          test: function test(value) {
+            if (value === undefined) return true;
+            var valids = this.schema._whitelist;
+            return valids.has(value, this.resolve) ? true : this.createError({
+              params: {
+                values: valids.toArray().join(', ')
+              }
+            });
+          }
+        });
+        return next;
+      },
+      notOneOf: function notOneOf(enums, message) {
+        if (message === void 0) {
+          message = mixed.notOneOf;
+        }
+
+        var next = this.clone();
+        enums.forEach(function (val) {
+          next._blacklist.add(val);
+
+          next._whitelist.delete(val);
+        });
+        next._blacklistError = createValidation({
+          message: message,
+          name: 'notOneOf',
+          test: function test(value) {
+            var invalids = this.schema._blacklist;
+            if (invalids.has(value, this.resolve)) return this.createError({
+              params: {
+                values: invalids.toArray().join(', ')
+              }
+            });
+            return true;
+          }
+        });
+        return next;
+      },
+      strip: function strip(_strip) {
+        if (_strip === void 0) {
+          _strip = true;
+        }
+
+        var next = this.clone();
+        next._strip = _strip;
+        return next;
+      },
+      _option: function _option(key, overrides) {
+        return has(overrides, key) ? overrides[key] : this._options[key];
+      },
+      describe: function describe() {
+        var next = this.clone();
+        var description = {
+          type: next._type,
+          meta: next._meta,
+          label: next._label,
+          tests: next.tests.map(function (fn) {
+            return {
+              name: fn.OPTIONS.name,
+              params: fn.OPTIONS.params
+            };
+          }).filter(function (n, idx, list) {
+            return list.findIndex(function (c) {
+              return c.name === n.name;
+            }) === idx;
+          })
+        };
+        if (next._whitelist.size) description.oneOf = next._whitelist.describe();
+        if (next._blacklist.size) description.notOneOf = next._blacklist.describe();
+        return description;
+      },
+      defined: function defined(message) {
+        if (message === void 0) {
+          message = mixed.defined;
+        }
+
+        return this.nullable().test({
+          message: message,
+          name: 'defined',
+          exclusive: true,
+          test: function test(value) {
+            return value !== undefined;
+          }
+        });
+      }
+    };
+
+    var _loop = function _loop() {
+      var method = _arr[_i];
+
+      proto[method + "At"] = function (path, value, options) {
+        if (options === void 0) {
+          options = {};
+        }
+
+        var _getIn = getIn(this, path, value, options.context),
+            parent = _getIn.parent,
+            parentPath = _getIn.parentPath,
+            schema = _getIn.schema;
+
+        return schema[method](parent && parent[parentPath], _extends({}, options, {
+          parent: parent,
+          path: path
+        }));
+      };
+    };
+
+    for (var _i = 0, _arr = ['validate', 'validateSync']; _i < _arr.length; _i++) {
+      _loop();
+    }
+
+    for (var _i2 = 0, _arr2 = ['equals', 'is']; _i2 < _arr2.length; _i2++) {
+      var alias = _arr2[_i2];
+      proto[alias] = proto.oneOf;
+    }
+
+    for (var _i3 = 0, _arr3 = ['not', 'nope']; _i3 < _arr3.length; _i3++) {
+      var _alias = _arr3[_i3];
+      proto[_alias] = proto.notOneOf;
+    }
+
+    proto.optional = proto.notRequired;
+
+    function inherits(ctor, superCtor, spec) {
+      ctor.prototype = Object.create(superCtor.prototype, {
+        constructor: {
+          value: ctor,
+          enumerable: false,
+          writable: true,
+          configurable: true
+        }
+      });
+
+      _extends(ctor.prototype, spec);
+    }
+
+    function BooleanSchema() {
+      var _this = this;
+
+      if (!(this instanceof BooleanSchema)) return new BooleanSchema();
+      SchemaType.call(this, {
+        type: 'boolean'
+      });
+      this.withMutation(function () {
+        _this.transform(function (value) {
+          if (!this.isType(value)) {
+            if (/^(true|1)$/i.test(value)) return true;
+            if (/^(false|0)$/i.test(value)) return false;
+          }
+
+          return value;
+        });
+      });
+    }
+
+    inherits(BooleanSchema, SchemaType, {
+      _typeCheck: function _typeCheck(v) {
+        if (v instanceof Boolean) v = v.valueOf();
+        return typeof v === 'boolean';
+      }
     });
 
-    const get_default_slot_context$1 = ctx => ({
-    	isSubmitting: /*$isSubmitting*/ ctx[5],
-    	isValid: /*isValid*/ ctx[0],
-    	setValue: /*setValue*/ ctx[13],
-    	touchField: /*touchField*/ ctx[12],
-    	validate: /*validate*/ ctx[11],
-    	values: /*$values*/ ctx[2],
-    	errors: /*$errors*/ ctx[4],
-    	touched: /*$touched*/ ctx[3]
+    var isAbsent = (function (value) {
+      return value == null;
     });
 
-    function create_fragment$e(ctx) {
-    	let form_1;
+    var rEmail = /^((([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+(\.([a-z]|\d|[!#\$%&'\*\+\-\/=\?\^_`{\|}~]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])+)*)|((\x22)((((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(([\x01-\x08\x0b\x0c\x0e-\x1f\x7f]|\x21|[\x23-\x5b]|[\x5d-\x7e]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(\\([\x01-\x09\x0b\x0c\x0d-\x7f]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF]))))*(((\x20|\x09)*(\x0d\x0a))?(\x20|\x09)+)?(\x22)))@((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))$/i; // eslint-disable-next-line
+
+    var rUrl = /^((https?|ftp):)?\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i; // eslint-disable-next-line
+
+    var rUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    var isTrimmed = function isTrimmed(value) {
+      return isAbsent(value) || value === value.trim();
+    };
+
+    function StringSchema() {
+      var _this = this;
+
+      if (!(this instanceof StringSchema)) return new StringSchema();
+      SchemaType.call(this, {
+        type: 'string'
+      });
+      this.withMutation(function () {
+        _this.transform(function (value) {
+          if (this.isType(value)) return value;
+          return value != null && value.toString ? value.toString() : value;
+        });
+      });
+    }
+    inherits(StringSchema, SchemaType, {
+      _typeCheck: function _typeCheck(value) {
+        if (value instanceof String) value = value.valueOf();
+        return typeof value === 'string';
+      },
+      _isPresent: function _isPresent(value) {
+        return SchemaType.prototype._isPresent.call(this, value) && value.length > 0;
+      },
+      length: function length(_length, message) {
+        if (message === void 0) {
+          message = string.length;
+        }
+
+        return this.test({
+          message: message,
+          name: 'length',
+          exclusive: true,
+          params: {
+            length: _length
+          },
+          test: function test(value) {
+            return isAbsent(value) || value.length === this.resolve(_length);
+          }
+        });
+      },
+      min: function min(_min, message) {
+        if (message === void 0) {
+          message = string.min;
+        }
+
+        return this.test({
+          message: message,
+          name: 'min',
+          exclusive: true,
+          params: {
+            min: _min
+          },
+          test: function test(value) {
+            return isAbsent(value) || value.length >= this.resolve(_min);
+          }
+        });
+      },
+      max: function max(_max, message) {
+        if (message === void 0) {
+          message = string.max;
+        }
+
+        return this.test({
+          name: 'max',
+          exclusive: true,
+          message: message,
+          params: {
+            max: _max
+          },
+          test: function test(value) {
+            return isAbsent(value) || value.length <= this.resolve(_max);
+          }
+        });
+      },
+      matches: function matches(regex, options) {
+        var excludeEmptyString = false;
+        var message;
+        var name;
+
+        if (options) {
+          if (typeof options === 'object') {
+            excludeEmptyString = options.excludeEmptyString;
+            message = options.message;
+            name = options.name;
+          } else {
+            message = options;
+          }
+        }
+
+        return this.test({
+          name: name || 'matches',
+          message: message || string.matches,
+          params: {
+            regex: regex
+          },
+          test: function test(value) {
+            return isAbsent(value) || value === '' && excludeEmptyString || value.search(regex) !== -1;
+          }
+        });
+      },
+      email: function email(message) {
+        if (message === void 0) {
+          message = string.email;
+        }
+
+        return this.matches(rEmail, {
+          name: 'email',
+          message: message,
+          excludeEmptyString: true
+        });
+      },
+      url: function url(message) {
+        if (message === void 0) {
+          message = string.url;
+        }
+
+        return this.matches(rUrl, {
+          name: 'url',
+          message: message,
+          excludeEmptyString: true
+        });
+      },
+      uuid: function uuid(message) {
+        if (message === void 0) {
+          message = string.uuid;
+        }
+
+        return this.matches(rUUID, {
+          name: 'uuid',
+          message: message,
+          excludeEmptyString: false
+        });
+      },
+      //-- transforms --
+      ensure: function ensure() {
+        return this.default('').transform(function (val) {
+          return val === null ? '' : val;
+        });
+      },
+      trim: function trim(message) {
+        if (message === void 0) {
+          message = string.trim;
+        }
+
+        return this.transform(function (val) {
+          return val != null ? val.trim() : val;
+        }).test({
+          message: message,
+          name: 'trim',
+          test: isTrimmed
+        });
+      },
+      lowercase: function lowercase(message) {
+        if (message === void 0) {
+          message = string.lowercase;
+        }
+
+        return this.transform(function (value) {
+          return !isAbsent(value) ? value.toLowerCase() : value;
+        }).test({
+          message: message,
+          name: 'string_case',
+          exclusive: true,
+          test: function test(value) {
+            return isAbsent(value) || value === value.toLowerCase();
+          }
+        });
+      },
+      uppercase: function uppercase(message) {
+        if (message === void 0) {
+          message = string.uppercase;
+        }
+
+        return this.transform(function (value) {
+          return !isAbsent(value) ? value.toUpperCase() : value;
+        }).test({
+          message: message,
+          name: 'string_case',
+          exclusive: true,
+          test: function test(value) {
+            return isAbsent(value) || value === value.toUpperCase();
+          }
+        });
+      }
+    });
+
+    var isNaN$1 = function isNaN(value) {
+      return value != +value;
+    };
+
+    function NumberSchema() {
+      var _this = this;
+
+      if (!(this instanceof NumberSchema)) return new NumberSchema();
+      SchemaType.call(this, {
+        type: 'number'
+      });
+      this.withMutation(function () {
+        _this.transform(function (value) {
+          var parsed = value;
+
+          if (typeof parsed === 'string') {
+            parsed = parsed.replace(/\s/g, '');
+            if (parsed === '') return NaN; // don't use parseFloat to avoid positives on alpha-numeric strings
+
+            parsed = +parsed;
+          }
+
+          if (this.isType(parsed)) return parsed;
+          return parseFloat(parsed);
+        });
+      });
+    }
+    inherits(NumberSchema, SchemaType, {
+      _typeCheck: function _typeCheck(value) {
+        if (value instanceof Number) value = value.valueOf();
+        return typeof value === 'number' && !isNaN$1(value);
+      },
+      min: function min(_min, message) {
+        if (message === void 0) {
+          message = number.min;
+        }
+
+        return this.test({
+          message: message,
+          name: 'min',
+          exclusive: true,
+          params: {
+            min: _min
+          },
+          test: function test(value) {
+            return isAbsent(value) || value >= this.resolve(_min);
+          }
+        });
+      },
+      max: function max(_max, message) {
+        if (message === void 0) {
+          message = number.max;
+        }
+
+        return this.test({
+          message: message,
+          name: 'max',
+          exclusive: true,
+          params: {
+            max: _max
+          },
+          test: function test(value) {
+            return isAbsent(value) || value <= this.resolve(_max);
+          }
+        });
+      },
+      lessThan: function lessThan(less, message) {
+        if (message === void 0) {
+          message = number.lessThan;
+        }
+
+        return this.test({
+          message: message,
+          name: 'max',
+          exclusive: true,
+          params: {
+            less: less
+          },
+          test: function test(value) {
+            return isAbsent(value) || value < this.resolve(less);
+          }
+        });
+      },
+      moreThan: function moreThan(more, message) {
+        if (message === void 0) {
+          message = number.moreThan;
+        }
+
+        return this.test({
+          message: message,
+          name: 'min',
+          exclusive: true,
+          params: {
+            more: more
+          },
+          test: function test(value) {
+            return isAbsent(value) || value > this.resolve(more);
+          }
+        });
+      },
+      positive: function positive(msg) {
+        if (msg === void 0) {
+          msg = number.positive;
+        }
+
+        return this.moreThan(0, msg);
+      },
+      negative: function negative(msg) {
+        if (msg === void 0) {
+          msg = number.negative;
+        }
+
+        return this.lessThan(0, msg);
+      },
+      integer: function integer(message) {
+        if (message === void 0) {
+          message = number.integer;
+        }
+
+        return this.test({
+          name: 'integer',
+          message: message,
+          test: function test(val) {
+            return isAbsent(val) || Number.isInteger(val);
+          }
+        });
+      },
+      truncate: function truncate() {
+        return this.transform(function (value) {
+          return !isAbsent(value) ? value | 0 : value;
+        });
+      },
+      round: function round(method) {
+        var avail = ['ceil', 'floor', 'round', 'trunc'];
+        method = method && method.toLowerCase() || 'round'; // this exists for symemtry with the new Math.trunc
+
+        if (method === 'trunc') return this.truncate();
+        if (avail.indexOf(method.toLowerCase()) === -1) throw new TypeError('Only valid options for round() are: ' + avail.join(', '));
+        return this.transform(function (value) {
+          return !isAbsent(value) ? Math[method](value) : value;
+        });
+      }
+    });
+
+    /* eslint-disable */
+
+    /**
+     *
+     * Date.parse with progressive enhancement for ISO 8601 <https://github.com/csnover/js-iso8601>
+     * NON-CONFORMANT EDITION.
+     * © 2011 Colin Snover <http://zetafleet.com>
+     * Released under MIT license.
+     */
+    //              1 YYYY                 2 MM        3 DD              4 HH     5 mm        6 ss            7 msec         8 Z 9 ±    10 tzHH    11 tzmm
+    var isoReg = /^(\d{4}|[+\-]\d{6})(?:-?(\d{2})(?:-?(\d{2}))?)?(?:[ T]?(\d{2}):?(\d{2})(?::?(\d{2})(?:[,\.](\d{1,}))?)?(?:(Z)|([+\-])(\d{2})(?::?(\d{2}))?)?)?$/;
+    function parseIsoDate(date) {
+      var numericKeys = [1, 4, 5, 6, 7, 10, 11],
+          minutesOffset = 0,
+          timestamp,
+          struct;
+
+      if (struct = isoReg.exec(date)) {
+        // avoid NaN timestamps caused by “undefined” values being passed to Date.UTC
+        for (var i = 0, k; k = numericKeys[i]; ++i) {
+          struct[k] = +struct[k] || 0;
+        } // allow undefined days and months
+
+
+        struct[2] = (+struct[2] || 1) - 1;
+        struct[3] = +struct[3] || 1; // allow arbitrary sub-second precision beyond milliseconds
+
+        struct[7] = struct[7] ? String(struct[7]).substr(0, 3) : 0; // timestamps without timezone identifiers should be considered local time
+
+        if ((struct[8] === undefined || struct[8] === '') && (struct[9] === undefined || struct[9] === '')) timestamp = +new Date(struct[1], struct[2], struct[3], struct[4], struct[5], struct[6], struct[7]);else {
+          if (struct[8] !== 'Z' && struct[9] !== undefined) {
+            minutesOffset = struct[10] * 60 + struct[11];
+            if (struct[9] === '+') minutesOffset = 0 - minutesOffset;
+          }
+
+          timestamp = Date.UTC(struct[1], struct[2], struct[3], struct[4], struct[5] + minutesOffset, struct[6], struct[7]);
+        }
+      } else timestamp = Date.parse ? Date.parse(date) : NaN;
+
+      return timestamp;
+    }
+
+    var invalidDate = new Date('');
+
+    var isDate = function isDate(obj) {
+      return Object.prototype.toString.call(obj) === '[object Date]';
+    };
+
+    function DateSchema() {
+      var _this = this;
+
+      if (!(this instanceof DateSchema)) return new DateSchema();
+      SchemaType.call(this, {
+        type: 'date'
+      });
+      this.withMutation(function () {
+        _this.transform(function (value) {
+          if (this.isType(value)) return value;
+          value = parseIsoDate(value); // 0 is a valid timestamp equivalent to 1970-01-01T00:00:00Z(unix epoch) or before.
+
+          return !isNaN(value) ? new Date(value) : invalidDate;
+        });
+      });
+    }
+
+    inherits(DateSchema, SchemaType, {
+      _typeCheck: function _typeCheck(v) {
+        return isDate(v) && !isNaN(v.getTime());
+      },
+      min: function min(_min, message) {
+        if (message === void 0) {
+          message = date.min;
+        }
+
+        var limit = _min;
+
+        if (!Reference.isRef(limit)) {
+          limit = this.cast(_min);
+          if (!this._typeCheck(limit)) throw new TypeError('`min` must be a Date or a value that can be `cast()` to a Date');
+        }
+
+        return this.test({
+          message: message,
+          name: 'min',
+          exclusive: true,
+          params: {
+            min: _min
+          },
+          test: function test(value) {
+            return isAbsent(value) || value >= this.resolve(limit);
+          }
+        });
+      },
+      max: function max(_max, message) {
+        if (message === void 0) {
+          message = date.max;
+        }
+
+        var limit = _max;
+
+        if (!Reference.isRef(limit)) {
+          limit = this.cast(_max);
+          if (!this._typeCheck(limit)) throw new TypeError('`max` must be a Date or a value that can be `cast()` to a Date');
+        }
+
+        return this.test({
+          message: message,
+          name: 'max',
+          exclusive: true,
+          params: {
+            max: _max
+          },
+          test: function test(value) {
+            return isAbsent(value) || value <= this.resolve(limit);
+          }
+        });
+      }
+    });
+
+    function _taggedTemplateLiteralLoose(strings, raw) {
+      if (!raw) {
+        raw = strings.slice(0);
+      }
+
+      strings.raw = raw;
+      return strings;
+    }
+
+    /**
+     * A specialized version of `_.reduce` for arrays without support for
+     * iteratee shorthands.
+     *
+     * @private
+     * @param {Array} [array] The array to iterate over.
+     * @param {Function} iteratee The function invoked per iteration.
+     * @param {*} [accumulator] The initial value.
+     * @param {boolean} [initAccum] Specify using the first element of `array` as
+     *  the initial value.
+     * @returns {*} Returns the accumulated value.
+     */
+    function arrayReduce(array, iteratee, accumulator, initAccum) {
+      var index = -1,
+          length = array == null ? 0 : array.length;
+
+      if (initAccum && length) {
+        accumulator = array[++index];
+      }
+      while (++index < length) {
+        accumulator = iteratee(accumulator, array[index], index, array);
+      }
+      return accumulator;
+    }
+
+    /**
+     * The base implementation of `_.propertyOf` without support for deep paths.
+     *
+     * @private
+     * @param {Object} object The object to query.
+     * @returns {Function} Returns the new accessor function.
+     */
+    function basePropertyOf(object) {
+      return function(key) {
+        return object == null ? undefined : object[key];
+      };
+    }
+
+    /** Used to map Latin Unicode letters to basic Latin letters. */
+    var deburredLetters = {
+      // Latin-1 Supplement block.
+      '\xc0': 'A',  '\xc1': 'A', '\xc2': 'A', '\xc3': 'A', '\xc4': 'A', '\xc5': 'A',
+      '\xe0': 'a',  '\xe1': 'a', '\xe2': 'a', '\xe3': 'a', '\xe4': 'a', '\xe5': 'a',
+      '\xc7': 'C',  '\xe7': 'c',
+      '\xd0': 'D',  '\xf0': 'd',
+      '\xc8': 'E',  '\xc9': 'E', '\xca': 'E', '\xcb': 'E',
+      '\xe8': 'e',  '\xe9': 'e', '\xea': 'e', '\xeb': 'e',
+      '\xcc': 'I',  '\xcd': 'I', '\xce': 'I', '\xcf': 'I',
+      '\xec': 'i',  '\xed': 'i', '\xee': 'i', '\xef': 'i',
+      '\xd1': 'N',  '\xf1': 'n',
+      '\xd2': 'O',  '\xd3': 'O', '\xd4': 'O', '\xd5': 'O', '\xd6': 'O', '\xd8': 'O',
+      '\xf2': 'o',  '\xf3': 'o', '\xf4': 'o', '\xf5': 'o', '\xf6': 'o', '\xf8': 'o',
+      '\xd9': 'U',  '\xda': 'U', '\xdb': 'U', '\xdc': 'U',
+      '\xf9': 'u',  '\xfa': 'u', '\xfb': 'u', '\xfc': 'u',
+      '\xdd': 'Y',  '\xfd': 'y', '\xff': 'y',
+      '\xc6': 'Ae', '\xe6': 'ae',
+      '\xde': 'Th', '\xfe': 'th',
+      '\xdf': 'ss',
+      // Latin Extended-A block.
+      '\u0100': 'A',  '\u0102': 'A', '\u0104': 'A',
+      '\u0101': 'a',  '\u0103': 'a', '\u0105': 'a',
+      '\u0106': 'C',  '\u0108': 'C', '\u010a': 'C', '\u010c': 'C',
+      '\u0107': 'c',  '\u0109': 'c', '\u010b': 'c', '\u010d': 'c',
+      '\u010e': 'D',  '\u0110': 'D', '\u010f': 'd', '\u0111': 'd',
+      '\u0112': 'E',  '\u0114': 'E', '\u0116': 'E', '\u0118': 'E', '\u011a': 'E',
+      '\u0113': 'e',  '\u0115': 'e', '\u0117': 'e', '\u0119': 'e', '\u011b': 'e',
+      '\u011c': 'G',  '\u011e': 'G', '\u0120': 'G', '\u0122': 'G',
+      '\u011d': 'g',  '\u011f': 'g', '\u0121': 'g', '\u0123': 'g',
+      '\u0124': 'H',  '\u0126': 'H', '\u0125': 'h', '\u0127': 'h',
+      '\u0128': 'I',  '\u012a': 'I', '\u012c': 'I', '\u012e': 'I', '\u0130': 'I',
+      '\u0129': 'i',  '\u012b': 'i', '\u012d': 'i', '\u012f': 'i', '\u0131': 'i',
+      '\u0134': 'J',  '\u0135': 'j',
+      '\u0136': 'K',  '\u0137': 'k', '\u0138': 'k',
+      '\u0139': 'L',  '\u013b': 'L', '\u013d': 'L', '\u013f': 'L', '\u0141': 'L',
+      '\u013a': 'l',  '\u013c': 'l', '\u013e': 'l', '\u0140': 'l', '\u0142': 'l',
+      '\u0143': 'N',  '\u0145': 'N', '\u0147': 'N', '\u014a': 'N',
+      '\u0144': 'n',  '\u0146': 'n', '\u0148': 'n', '\u014b': 'n',
+      '\u014c': 'O',  '\u014e': 'O', '\u0150': 'O',
+      '\u014d': 'o',  '\u014f': 'o', '\u0151': 'o',
+      '\u0154': 'R',  '\u0156': 'R', '\u0158': 'R',
+      '\u0155': 'r',  '\u0157': 'r', '\u0159': 'r',
+      '\u015a': 'S',  '\u015c': 'S', '\u015e': 'S', '\u0160': 'S',
+      '\u015b': 's',  '\u015d': 's', '\u015f': 's', '\u0161': 's',
+      '\u0162': 'T',  '\u0164': 'T', '\u0166': 'T',
+      '\u0163': 't',  '\u0165': 't', '\u0167': 't',
+      '\u0168': 'U',  '\u016a': 'U', '\u016c': 'U', '\u016e': 'U', '\u0170': 'U', '\u0172': 'U',
+      '\u0169': 'u',  '\u016b': 'u', '\u016d': 'u', '\u016f': 'u', '\u0171': 'u', '\u0173': 'u',
+      '\u0174': 'W',  '\u0175': 'w',
+      '\u0176': 'Y',  '\u0177': 'y', '\u0178': 'Y',
+      '\u0179': 'Z',  '\u017b': 'Z', '\u017d': 'Z',
+      '\u017a': 'z',  '\u017c': 'z', '\u017e': 'z',
+      '\u0132': 'IJ', '\u0133': 'ij',
+      '\u0152': 'Oe', '\u0153': 'oe',
+      '\u0149': "'n", '\u017f': 's'
+    };
+
+    /**
+     * Used by `_.deburr` to convert Latin-1 Supplement and Latin Extended-A
+     * letters to basic Latin letters.
+     *
+     * @private
+     * @param {string} letter The matched letter to deburr.
+     * @returns {string} Returns the deburred letter.
+     */
+    var deburrLetter = basePropertyOf(deburredLetters);
+
+    /** Used to match Latin Unicode letters (excluding mathematical operators). */
+    var reLatin = /[\xc0-\xd6\xd8-\xf6\xf8-\xff\u0100-\u017f]/g;
+
+    /** Used to compose unicode character classes. */
+    var rsComboMarksRange$2 = '\\u0300-\\u036f',
+        reComboHalfMarksRange$2 = '\\ufe20-\\ufe2f',
+        rsComboSymbolsRange$2 = '\\u20d0-\\u20ff',
+        rsComboRange$2 = rsComboMarksRange$2 + reComboHalfMarksRange$2 + rsComboSymbolsRange$2;
+
+    /** Used to compose unicode capture groups. */
+    var rsCombo$1 = '[' + rsComboRange$2 + ']';
+
+    /**
+     * Used to match [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks) and
+     * [combining diacritical marks for symbols](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks_for_Symbols).
+     */
+    var reComboMark = RegExp(rsCombo$1, 'g');
+
+    /**
+     * Deburrs `string` by converting
+     * [Latin-1 Supplement](https://en.wikipedia.org/wiki/Latin-1_Supplement_(Unicode_block)#Character_table)
+     * and [Latin Extended-A](https://en.wikipedia.org/wiki/Latin_Extended-A)
+     * letters to basic Latin letters and removing
+     * [combining diacritical marks](https://en.wikipedia.org/wiki/Combining_Diacritical_Marks).
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category String
+     * @param {string} [string=''] The string to deburr.
+     * @returns {string} Returns the deburred string.
+     * @example
+     *
+     * _.deburr('déjà vu');
+     * // => 'deja vu'
+     */
+    function deburr(string) {
+      string = toString(string);
+      return string && string.replace(reLatin, deburrLetter).replace(reComboMark, '');
+    }
+
+    /** Used to match words composed of alphanumeric characters. */
+    var reAsciiWord = /[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+/g;
+
+    /**
+     * Splits an ASCII `string` into an array of its words.
+     *
+     * @private
+     * @param {string} The string to inspect.
+     * @returns {Array} Returns the words of `string`.
+     */
+    function asciiWords(string) {
+      return string.match(reAsciiWord) || [];
+    }
+
+    /** Used to detect strings that need a more robust regexp to match words. */
+    var reHasUnicodeWord = /[a-z][A-Z]|[A-Z]{2}[a-z]|[0-9][a-zA-Z]|[a-zA-Z][0-9]|[^a-zA-Z0-9 ]/;
+
+    /**
+     * Checks if `string` contains a word composed of Unicode symbols.
+     *
+     * @private
+     * @param {string} string The string to inspect.
+     * @returns {boolean} Returns `true` if a word is found, else `false`.
+     */
+    function hasUnicodeWord(string) {
+      return reHasUnicodeWord.test(string);
+    }
+
+    /** Used to compose unicode character classes. */
+    var rsAstralRange$2 = '\\ud800-\\udfff',
+        rsComboMarksRange$3 = '\\u0300-\\u036f',
+        reComboHalfMarksRange$3 = '\\ufe20-\\ufe2f',
+        rsComboSymbolsRange$3 = '\\u20d0-\\u20ff',
+        rsComboRange$3 = rsComboMarksRange$3 + reComboHalfMarksRange$3 + rsComboSymbolsRange$3,
+        rsDingbatRange = '\\u2700-\\u27bf',
+        rsLowerRange = 'a-z\\xdf-\\xf6\\xf8-\\xff',
+        rsMathOpRange = '\\xac\\xb1\\xd7\\xf7',
+        rsNonCharRange = '\\x00-\\x2f\\x3a-\\x40\\x5b-\\x60\\x7b-\\xbf',
+        rsPunctuationRange = '\\u2000-\\u206f',
+        rsSpaceRange = ' \\t\\x0b\\f\\xa0\\ufeff\\n\\r\\u2028\\u2029\\u1680\\u180e\\u2000\\u2001\\u2002\\u2003\\u2004\\u2005\\u2006\\u2007\\u2008\\u2009\\u200a\\u202f\\u205f\\u3000',
+        rsUpperRange = 'A-Z\\xc0-\\xd6\\xd8-\\xde',
+        rsVarRange$2 = '\\ufe0e\\ufe0f',
+        rsBreakRange = rsMathOpRange + rsNonCharRange + rsPunctuationRange + rsSpaceRange;
+
+    /** Used to compose unicode capture groups. */
+    var rsApos = "['\u2019]",
+        rsBreak = '[' + rsBreakRange + ']',
+        rsCombo$2 = '[' + rsComboRange$3 + ']',
+        rsDigits = '\\d+',
+        rsDingbat = '[' + rsDingbatRange + ']',
+        rsLower = '[' + rsLowerRange + ']',
+        rsMisc = '[^' + rsAstralRange$2 + rsBreakRange + rsDigits + rsDingbatRange + rsLowerRange + rsUpperRange + ']',
+        rsFitz$1 = '\\ud83c[\\udffb-\\udfff]',
+        rsModifier$1 = '(?:' + rsCombo$2 + '|' + rsFitz$1 + ')',
+        rsNonAstral$1 = '[^' + rsAstralRange$2 + ']',
+        rsRegional$1 = '(?:\\ud83c[\\udde6-\\uddff]){2}',
+        rsSurrPair$1 = '[\\ud800-\\udbff][\\udc00-\\udfff]',
+        rsUpper = '[' + rsUpperRange + ']',
+        rsZWJ$2 = '\\u200d';
+
+    /** Used to compose unicode regexes. */
+    var rsMiscLower = '(?:' + rsLower + '|' + rsMisc + ')',
+        rsMiscUpper = '(?:' + rsUpper + '|' + rsMisc + ')',
+        rsOptContrLower = '(?:' + rsApos + '(?:d|ll|m|re|s|t|ve))?',
+        rsOptContrUpper = '(?:' + rsApos + '(?:D|LL|M|RE|S|T|VE))?',
+        reOptMod$1 = rsModifier$1 + '?',
+        rsOptVar$1 = '[' + rsVarRange$2 + ']?',
+        rsOptJoin$1 = '(?:' + rsZWJ$2 + '(?:' + [rsNonAstral$1, rsRegional$1, rsSurrPair$1].join('|') + ')' + rsOptVar$1 + reOptMod$1 + ')*',
+        rsOrdLower = '\\d*(?:1st|2nd|3rd|(?![123])\\dth)(?=\\b|[A-Z_])',
+        rsOrdUpper = '\\d*(?:1ST|2ND|3RD|(?![123])\\dTH)(?=\\b|[a-z_])',
+        rsSeq$1 = rsOptVar$1 + reOptMod$1 + rsOptJoin$1,
+        rsEmoji = '(?:' + [rsDingbat, rsRegional$1, rsSurrPair$1].join('|') + ')' + rsSeq$1;
+
+    /** Used to match complex or compound words. */
+    var reUnicodeWord = RegExp([
+      rsUpper + '?' + rsLower + '+' + rsOptContrLower + '(?=' + [rsBreak, rsUpper, '$'].join('|') + ')',
+      rsMiscUpper + '+' + rsOptContrUpper + '(?=' + [rsBreak, rsUpper + rsMiscLower, '$'].join('|') + ')',
+      rsUpper + '?' + rsMiscLower + '+' + rsOptContrLower,
+      rsUpper + '+' + rsOptContrUpper,
+      rsOrdUpper,
+      rsOrdLower,
+      rsDigits,
+      rsEmoji
+    ].join('|'), 'g');
+
+    /**
+     * Splits a Unicode `string` into an array of its words.
+     *
+     * @private
+     * @param {string} The string to inspect.
+     * @returns {Array} Returns the words of `string`.
+     */
+    function unicodeWords(string) {
+      return string.match(reUnicodeWord) || [];
+    }
+
+    /**
+     * Splits `string` into an array of its words.
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category String
+     * @param {string} [string=''] The string to inspect.
+     * @param {RegExp|string} [pattern] The pattern to match words.
+     * @param- {Object} [guard] Enables use as an iteratee for methods like `_.map`.
+     * @returns {Array} Returns the words of `string`.
+     * @example
+     *
+     * _.words('fred, barney, & pebbles');
+     * // => ['fred', 'barney', 'pebbles']
+     *
+     * _.words('fred, barney, & pebbles', /[^, ]+/g);
+     * // => ['fred', 'barney', '&', 'pebbles']
+     */
+    function words(string, pattern, guard) {
+      string = toString(string);
+      pattern = guard ? undefined : pattern;
+
+      if (pattern === undefined) {
+        return hasUnicodeWord(string) ? unicodeWords(string) : asciiWords(string);
+      }
+      return string.match(pattern) || [];
+    }
+
+    /** Used to compose unicode capture groups. */
+    var rsApos$1 = "['\u2019]";
+
+    /** Used to match apostrophes. */
+    var reApos = RegExp(rsApos$1, 'g');
+
+    /**
+     * Creates a function like `_.camelCase`.
+     *
+     * @private
+     * @param {Function} callback The function to combine each word.
+     * @returns {Function} Returns the new compounder function.
+     */
+    function createCompounder(callback) {
+      return function(string) {
+        return arrayReduce(words(deburr(string).replace(reApos, '')), callback, '');
+      };
+    }
+
+    /**
+     * Converts `string` to
+     * [snake case](https://en.wikipedia.org/wiki/Snake_case).
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the snake cased string.
+     * @example
+     *
+     * _.snakeCase('Foo Bar');
+     * // => 'foo_bar'
+     *
+     * _.snakeCase('fooBar');
+     * // => 'foo_bar'
+     *
+     * _.snakeCase('--FOO-BAR--');
+     * // => 'foo_bar'
+     */
+    var snakeCase = createCompounder(function(result, word, index) {
+      return result + (index ? '_' : '') + word.toLowerCase();
+    });
+
+    /**
+     * The base implementation of `_.slice` without an iteratee call guard.
+     *
+     * @private
+     * @param {Array} array The array to slice.
+     * @param {number} [start=0] The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns the slice of `array`.
+     */
+    function baseSlice(array, start, end) {
+      var index = -1,
+          length = array.length;
+
+      if (start < 0) {
+        start = -start > length ? 0 : (length + start);
+      }
+      end = end > length ? length : end;
+      if (end < 0) {
+        end += length;
+      }
+      length = start > end ? 0 : ((end - start) >>> 0);
+      start >>>= 0;
+
+      var result = Array(length);
+      while (++index < length) {
+        result[index] = array[index + start];
+      }
+      return result;
+    }
+
+    /**
+     * Casts `array` to a slice if it's needed.
+     *
+     * @private
+     * @param {Array} array The array to inspect.
+     * @param {number} start The start position.
+     * @param {number} [end=array.length] The end position.
+     * @returns {Array} Returns the cast slice.
+     */
+    function castSlice(array, start, end) {
+      var length = array.length;
+      end = end === undefined ? length : end;
+      return (!start && end >= length) ? array : baseSlice(array, start, end);
+    }
+
+    /**
+     * Creates a function like `_.lowerFirst`.
+     *
+     * @private
+     * @param {string} methodName The name of the `String` case method to use.
+     * @returns {Function} Returns the new case function.
+     */
+    function createCaseFirst(methodName) {
+      return function(string) {
+        string = toString(string);
+
+        var strSymbols = hasUnicode(string)
+          ? stringToArray(string)
+          : undefined;
+
+        var chr = strSymbols
+          ? strSymbols[0]
+          : string.charAt(0);
+
+        var trailing = strSymbols
+          ? castSlice(strSymbols, 1).join('')
+          : string.slice(1);
+
+        return chr[methodName]() + trailing;
+      };
+    }
+
+    /**
+     * Converts the first character of `string` to upper case.
+     *
+     * @static
+     * @memberOf _
+     * @since 4.0.0
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the converted string.
+     * @example
+     *
+     * _.upperFirst('fred');
+     * // => 'Fred'
+     *
+     * _.upperFirst('FRED');
+     * // => 'FRED'
+     */
+    var upperFirst = createCaseFirst('toUpperCase');
+
+    /**
+     * Converts the first character of `string` to upper case and the remaining
+     * to lower case.
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category String
+     * @param {string} [string=''] The string to capitalize.
+     * @returns {string} Returns the capitalized string.
+     * @example
+     *
+     * _.capitalize('FRED');
+     * // => 'Fred'
+     */
+    function capitalize(string) {
+      return upperFirst(toString(string).toLowerCase());
+    }
+
+    /**
+     * Converts `string` to [camel case](https://en.wikipedia.org/wiki/CamelCase).
+     *
+     * @static
+     * @memberOf _
+     * @since 3.0.0
+     * @category String
+     * @param {string} [string=''] The string to convert.
+     * @returns {string} Returns the camel cased string.
+     * @example
+     *
+     * _.camelCase('Foo Bar');
+     * // => 'fooBar'
+     *
+     * _.camelCase('--foo-bar--');
+     * // => 'fooBar'
+     *
+     * _.camelCase('__FOO_BAR__');
+     * // => 'fooBar'
+     */
+    var camelCase = createCompounder(function(result, word, index) {
+      word = word.toLowerCase();
+      return result + (index ? capitalize(word) : word);
+    });
+
+    /**
+     * The opposite of `_.mapValues`; this method creates an object with the
+     * same values as `object` and keys generated by running each own enumerable
+     * string keyed property of `object` thru `iteratee`. The iteratee is invoked
+     * with three arguments: (value, key, object).
+     *
+     * @static
+     * @memberOf _
+     * @since 3.8.0
+     * @category Object
+     * @param {Object} object The object to iterate over.
+     * @param {Function} [iteratee=_.identity] The function invoked per iteration.
+     * @returns {Object} Returns the new mapped object.
+     * @see _.mapValues
+     * @example
+     *
+     * _.mapKeys({ 'a': 1, 'b': 2 }, function(value, key) {
+     *   return key + value;
+     * });
+     * // => { 'a1': 1, 'b2': 2 }
+     */
+    function mapKeys(object, iteratee) {
+      var result = {};
+      iteratee = baseIteratee(iteratee);
+
+      baseForOwn(object, function(value, key, object) {
+        baseAssignValue(result, iteratee(value, key, object), value);
+      });
+      return result;
+    }
+
+    /**
+     * Topological sorting function
+     *
+     * @param {Array} edges
+     * @returns {Array}
+     */
+
+    var toposort_1 = function(edges) {
+      return toposort(uniqueNodes(edges), edges)
+    };
+
+    var array$1 = toposort;
+
+    function toposort(nodes, edges) {
+      var cursor = nodes.length
+        , sorted = new Array(cursor)
+        , visited = {}
+        , i = cursor
+        // Better data structures make algorithm much faster.
+        , outgoingEdges = makeOutgoingEdges(edges)
+        , nodesHash = makeNodesHash(nodes);
+
+      // check for unknown nodes
+      edges.forEach(function(edge) {
+        if (!nodesHash.has(edge[0]) || !nodesHash.has(edge[1])) {
+          throw new Error('Unknown node. There is an unknown node in the supplied edges.')
+        }
+      });
+
+      while (i--) {
+        if (!visited[i]) visit(nodes[i], i, new Set());
+      }
+
+      return sorted
+
+      function visit(node, i, predecessors) {
+        if(predecessors.has(node)) {
+          var nodeRep;
+          try {
+            nodeRep = ", node was:" + JSON.stringify(node);
+          } catch(e) {
+            nodeRep = "";
+          }
+          throw new Error('Cyclic dependency' + nodeRep)
+        }
+
+        if (!nodesHash.has(node)) {
+          throw new Error('Found unknown node. Make sure to provided all involved nodes. Unknown node: '+JSON.stringify(node))
+        }
+
+        if (visited[i]) return;
+        visited[i] = true;
+
+        var outgoing = outgoingEdges.get(node) || new Set();
+        outgoing = Array.from(outgoing);
+
+        if (i = outgoing.length) {
+          predecessors.add(node);
+          do {
+            var child = outgoing[--i];
+            visit(child, nodesHash.get(child), predecessors);
+          } while (i)
+          predecessors.delete(node);
+        }
+
+        sorted[--cursor] = node;
+      }
+    }
+
+    function uniqueNodes(arr){
+      var res = new Set();
+      for (var i = 0, len = arr.length; i < len; i++) {
+        var edge = arr[i];
+        res.add(edge[0]);
+        res.add(edge[1]);
+      }
+      return Array.from(res)
+    }
+
+    function makeOutgoingEdges(arr){
+      var edges = new Map();
+      for (var i = 0, len = arr.length; i < len; i++) {
+        var edge = arr[i];
+        if (!edges.has(edge[0])) edges.set(edge[0], new Set());
+        if (!edges.has(edge[1])) edges.set(edge[1], new Set());
+        edges.get(edge[0]).add(edge[1]);
+      }
+      return edges
+    }
+
+    function makeNodesHash(arr){
+      var res = new Map();
+      for (var i = 0, len = arr.length; i < len; i++) {
+        res.set(arr[i], i);
+      }
+      return res
+    }
+    toposort_1.array = array$1;
+
+    function sortFields(fields, excludes) {
+      if (excludes === void 0) {
+        excludes = [];
+      }
+
+      var edges = [],
+          nodes = [];
+
+      function addNode(depPath, key) {
+        var node = propertyExpr.split(depPath)[0];
+        if (!~nodes.indexOf(node)) nodes.push(node);
+        if (!~excludes.indexOf(key + "-" + node)) edges.push([key, node]);
+      }
+
+      for (var key in fields) {
+        if (has(fields, key)) {
+          var value = fields[key];
+          if (!~nodes.indexOf(key)) nodes.push(key);
+          if (Reference.isRef(value) && value.isSibling) addNode(value.path, key);else if (isSchema(value) && value._deps) value._deps.forEach(function (path) {
+            return addNode(path, key);
+          });
+        }
+      }
+
+      return toposort_1.array(nodes, edges).reverse();
+    }
+
+    function findIndex(arr, err) {
+      var idx = Infinity;
+      arr.some(function (key, ii) {
+        if (err.path.indexOf(key) !== -1) {
+          idx = ii;
+          return true;
+        }
+      });
+      return idx;
+    }
+
+    function sortByKeyOrder(fields) {
+      var keys = Object.keys(fields);
+      return function (a, b) {
+        return findIndex(keys, a) - findIndex(keys, b);
+      };
+    }
+
+    function makePath(strings) {
+      for (var _len = arguments.length, values = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        values[_key - 1] = arguments[_key];
+      }
+
+      var path = strings.reduce(function (str, next) {
+        var value = values.shift();
+        return str + (value == null ? '' : value) + next;
+      });
+      return path.replace(/^\./, '');
+    }
+
+    function _templateObject3() {
+      var data = _taggedTemplateLiteralLoose(["", "[\"", "\"]"]);
+
+      _templateObject3 = function _templateObject3() {
+        return data;
+      };
+
+      return data;
+    }
+
+    function _templateObject2() {
+      var data = _taggedTemplateLiteralLoose(["", ".", ""]);
+
+      _templateObject2 = function _templateObject2() {
+        return data;
+      };
+
+      return data;
+    }
+
+    function _templateObject() {
+      var data = _taggedTemplateLiteralLoose(["", ".", ""]);
+
+      _templateObject = function _templateObject() {
+        return data;
+      };
+
+      return data;
+    }
+
+    var isObject$2 = function isObject(obj) {
+      return Object.prototype.toString.call(obj) === '[object Object]';
+    };
+
+    var promise$1 = function promise(sync) {
+      return sync ? synchronousPromise.SynchronousPromise : Promise;
+    };
+
+    function unknown(ctx, value) {
+      var known = Object.keys(ctx.fields);
+      return Object.keys(value).filter(function (key) {
+        return known.indexOf(key) === -1;
+      });
+    }
+
+    function ObjectSchema(spec) {
+      var _this2 = this;
+
+      if (!(this instanceof ObjectSchema)) return new ObjectSchema(spec);
+      SchemaType.call(this, {
+        type: 'object',
+        default: function _default() {
+          var _this = this;
+
+          if (!this._nodes.length) return undefined;
+          var dft = {};
+
+          this._nodes.forEach(function (key) {
+            dft[key] = _this.fields[key].default ? _this.fields[key].default() : undefined;
+          });
+
+          return dft;
+        }
+      });
+      this.fields = Object.create(null);
+      this._nodes = [];
+      this._excludedEdges = [];
+      this.withMutation(function () {
+        _this2.transform(function coerce(value) {
+          if (typeof value === 'string') {
+            try {
+              value = JSON.parse(value);
+            } catch (err) {
+              value = null;
+            }
+          }
+
+          if (this.isType(value)) return value;
+          return null;
+        });
+
+        if (spec) {
+          _this2.shape(spec);
+        }
+      });
+    }
+    inherits(ObjectSchema, SchemaType, {
+      _typeCheck: function _typeCheck(value) {
+        return isObject$2(value) || typeof value === 'function';
+      },
+      _cast: function _cast(_value, options) {
+        var _this3 = this;
+
+        if (options === void 0) {
+          options = {};
+        }
+
+        var value = SchemaType.prototype._cast.call(this, _value, options); //should ignore nulls here
+
+
+        if (value === undefined) return this.default();
+        if (!this._typeCheck(value)) return value;
+        var fields = this.fields;
+        var strip = this._option('stripUnknown', options) === true;
+
+        var props = this._nodes.concat(Object.keys(value).filter(function (v) {
+          return _this3._nodes.indexOf(v) === -1;
+        }));
+
+        var intermediateValue = {}; // is filled during the transform below
+
+        var innerOptions = _extends({}, options, {
+          parent: intermediateValue,
+          __validating: options.__validating || false
+        });
+
+        var isChanged = false;
+        props.forEach(function (prop) {
+          var field = fields[prop];
+          var exists = has(value, prop);
+
+          if (field) {
+            var fieldValue;
+            var strict = field._options && field._options.strict; // safe to mutate since this is fired in sequence
+
+            innerOptions.path = makePath(_templateObject(), options.path, prop);
+            innerOptions.value = value[prop];
+            field = field.resolve(innerOptions);
+
+            if (field._strip === true) {
+              isChanged = isChanged || prop in value;
+              return;
+            }
+
+            fieldValue = !options.__validating || !strict ? field.cast(value[prop], innerOptions) : value[prop];
+            if (fieldValue !== undefined) intermediateValue[prop] = fieldValue;
+          } else if (exists && !strip) intermediateValue[prop] = value[prop];
+
+          if (intermediateValue[prop] !== value[prop]) isChanged = true;
+        });
+        return isChanged ? intermediateValue : value;
+      },
+      _validate: function _validate(_value, opts) {
+        var _this4 = this;
+
+        if (opts === void 0) {
+          opts = {};
+        }
+
+        var endEarly, recursive;
+        var sync = opts.sync;
+        var errors = [];
+        var originalValue = opts.originalValue != null ? opts.originalValue : _value;
+        var from = [{
+          schema: this,
+          value: originalValue
+        }].concat(opts.from || []);
+        endEarly = this._option('abortEarly', opts);
+        recursive = this._option('recursive', opts);
+        opts = _extends({}, opts, {
+          __validating: true,
+          originalValue: originalValue,
+          from: from
+        });
+        return SchemaType.prototype._validate.call(this, _value, opts).catch(propagateErrors(endEarly, errors)).then(function (value) {
+          if (!recursive || !isObject$2(value)) {
+            // only iterate though actual objects
+            if (errors.length) throw errors[0];
+            return value;
+          }
+
+          from = originalValue ? [].concat(from) : [{
+            schema: _this4,
+            value: originalValue || value
+          }].concat(opts.from || []);
+          originalValue = originalValue || value;
+
+          var validations = _this4._nodes.map(function (key) {
+            var path = key.indexOf('.') === -1 ? makePath(_templateObject2(), opts.path, key) : makePath(_templateObject3(), opts.path, key);
+            var field = _this4.fields[key];
+
+            var innerOptions = _extends({}, opts, {
+              path: path,
+              from: from,
+              parent: value,
+              originalValue: originalValue[key]
+            });
+
+            if (field && field.validate) {
+              // inner fields are always strict:
+              // 1. this isn't strict so the casting will also have cast inner values
+              // 2. this is strict in which case the nested values weren't cast either
+              innerOptions.strict = true;
+              return field.validate(value[key], innerOptions);
+            }
+
+            return promise$1(sync).resolve(true);
+          });
+
+          return runValidations({
+            sync: sync,
+            validations: validations,
+            value: value,
+            errors: errors,
+            endEarly: endEarly,
+            path: opts.path,
+            sort: sortByKeyOrder(_this4.fields)
+          });
+        });
+      },
+      concat: function concat(schema) {
+        var next = SchemaType.prototype.concat.call(this, schema);
+        next._nodes = sortFields(next.fields, next._excludedEdges);
+        return next;
+      },
+      shape: function shape(schema, excludes) {
+        if (excludes === void 0) {
+          excludes = [];
+        }
+
+        var next = this.clone();
+
+        var fields = _extends(next.fields, schema);
+
+        next.fields = fields;
+
+        if (excludes.length) {
+          if (!Array.isArray(excludes[0])) excludes = [excludes];
+          var keys = excludes.map(function (_ref) {
+            var first = _ref[0],
+                second = _ref[1];
+            return first + "-" + second;
+          });
+          next._excludedEdges = next._excludedEdges.concat(keys);
+        }
+
+        next._nodes = sortFields(fields, next._excludedEdges);
+        return next;
+      },
+      from: function from(_from, to, alias) {
+        var fromGetter = propertyExpr.getter(_from, true);
+        return this.transform(function (obj) {
+          if (obj == null) return obj;
+          var newObj = obj;
+
+          if (has(obj, _from)) {
+            newObj = _extends({}, obj);
+            if (!alias) delete newObj[_from];
+            newObj[to] = fromGetter(obj);
+          }
+
+          return newObj;
+        });
+      },
+      noUnknown: function noUnknown(noAllow, message) {
+        if (noAllow === void 0) {
+          noAllow = true;
+        }
+
+        if (message === void 0) {
+          message = object.noUnknown;
+        }
+
+        if (typeof noAllow === 'string') {
+          message = noAllow;
+          noAllow = true;
+        }
+
+        var next = this.test({
+          name: 'noUnknown',
+          exclusive: true,
+          message: message,
+          test: function test(value) {
+            if (value == null) return true;
+            var unknownKeys = unknown(this.schema, value);
+            return !noAllow || unknownKeys.length === 0 || this.createError({
+              params: {
+                unknown: unknownKeys.join(', ')
+              }
+            });
+          }
+        });
+        next._options.stripUnknown = noAllow;
+        return next;
+      },
+      unknown: function unknown(allow, message) {
+        if (allow === void 0) {
+          allow = true;
+        }
+
+        if (message === void 0) {
+          message = object.noUnknown;
+        }
+
+        return this.noUnknown(!allow, message);
+      },
+      transformKeys: function transformKeys(fn) {
+        return this.transform(function (obj) {
+          return obj && mapKeys(obj, function (_, key) {
+            return fn(key);
+          });
+        });
+      },
+      camelCase: function camelCase$1() {
+        return this.transformKeys(camelCase);
+      },
+      snakeCase: function snakeCase$1() {
+        return this.transformKeys(snakeCase);
+      },
+      constantCase: function constantCase() {
+        return this.transformKeys(function (key) {
+          return snakeCase(key).toUpperCase();
+        });
+      },
+      describe: function describe() {
+        var base = SchemaType.prototype.describe.call(this);
+        base.fields = mapValues(this.fields, function (value) {
+          return value.describe();
+        });
+        return base;
+      }
+    });
+
+    function _templateObject2$1() {
+      var data = _taggedTemplateLiteralLoose(["", "[", "]"]);
+
+      _templateObject2$1 = function _templateObject2() {
+        return data;
+      };
+
+      return data;
+    }
+
+    function _templateObject$1() {
+      var data = _taggedTemplateLiteralLoose(["", "[", "]"]);
+
+      _templateObject$1 = function _templateObject() {
+        return data;
+      };
+
+      return data;
+    }
+
+    function ArraySchema(type) {
+      var _this = this;
+
+      if (!(this instanceof ArraySchema)) return new ArraySchema(type);
+      SchemaType.call(this, {
+        type: 'array'
+      }); // `undefined` specifically means uninitialized, as opposed to
+      // "no subtype"
+
+      this._subType = undefined;
+      this.innerType = undefined;
+      this.withMutation(function () {
+        _this.transform(function (values) {
+          if (typeof values === 'string') try {
+            values = JSON.parse(values);
+          } catch (err) {
+            values = null;
+          }
+          return this.isType(values) ? values : null;
+        });
+
+        if (type) _this.of(type);
+      });
+    }
+
+    inherits(ArraySchema, SchemaType, {
+      _typeCheck: function _typeCheck(v) {
+        return Array.isArray(v);
+      },
+      _cast: function _cast(_value, _opts) {
+        var _this2 = this;
+
+        var value = SchemaType.prototype._cast.call(this, _value, _opts); //should ignore nulls here
+
+
+        if (!this._typeCheck(value) || !this.innerType) return value;
+        var isChanged = false;
+        var castArray = value.map(function (v, idx) {
+          var castElement = _this2.innerType.cast(v, _extends({}, _opts, {
+            path: makePath(_templateObject$1(), _opts.path, idx)
+          }));
+
+          if (castElement !== v) {
+            isChanged = true;
+          }
+
+          return castElement;
+        });
+        return isChanged ? castArray : value;
+      },
+      _validate: function _validate(_value, options) {
+        var _this3 = this;
+
+        if (options === void 0) {
+          options = {};
+        }
+
+        var errors = [];
+        var sync = options.sync;
+        var path = options.path;
+        var innerType = this.innerType;
+
+        var endEarly = this._option('abortEarly', options);
+
+        var recursive = this._option('recursive', options);
+
+        var originalValue = options.originalValue != null ? options.originalValue : _value;
+        return SchemaType.prototype._validate.call(this, _value, options).catch(propagateErrors(endEarly, errors)).then(function (value) {
+          if (!recursive || !innerType || !_this3._typeCheck(value)) {
+            if (errors.length) throw errors[0];
+            return value;
+          }
+
+          originalValue = originalValue || value; // #950 Ensure that sparse array empty slots are validated
+
+          var validations = new Array(value.length);
+
+          for (var idx = 0; idx < value.length; idx++) {
+            var item = value[idx];
+
+            var _path = makePath(_templateObject2$1(), options.path, idx); // object._validate note for isStrict explanation
+
+
+            var innerOptions = _extends({}, options, {
+              path: _path,
+              strict: true,
+              parent: value,
+              index: idx,
+              originalValue: originalValue[idx]
+            });
+
+            validations[idx] = innerType.validate ? innerType.validate(item, innerOptions) : true;
+          }
+
+          return runValidations({
+            sync: sync,
+            path: path,
+            value: value,
+            errors: errors,
+            endEarly: endEarly,
+            validations: validations
+          });
+        });
+      },
+      _isPresent: function _isPresent(value) {
+        return SchemaType.prototype._isPresent.call(this, value) && value.length > 0;
+      },
+      of: function of(schema) {
+        var next = this.clone();
+        if (schema !== false && !isSchema(schema)) throw new TypeError('`array.of()` sub-schema must be a valid yup schema, or `false` to negate a current sub-schema. ' + 'not: ' + printValue(schema));
+        next._subType = schema;
+        next.innerType = schema;
+        return next;
+      },
+      min: function min(_min, message) {
+        message = message || array.min;
+        return this.test({
+          message: message,
+          name: 'min',
+          exclusive: true,
+          params: {
+            min: _min
+          },
+          test: function test(value) {
+            return isAbsent(value) || value.length >= this.resolve(_min);
+          }
+        });
+      },
+      max: function max(_max, message) {
+        message = message || array.max;
+        return this.test({
+          message: message,
+          name: 'max',
+          exclusive: true,
+          params: {
+            max: _max
+          },
+          test: function test(value) {
+            return isAbsent(value) || value.length <= this.resolve(_max);
+          }
+        });
+      },
+      ensure: function ensure() {
+        var _this4 = this;
+
+        return this.default(function () {
+          return [];
+        }).transform(function (val, original) {
+          // We don't want to return `null` for nullable schema
+          if (_this4._typeCheck(val)) return val;
+          return original == null ? [] : [].concat(original);
+        });
+      },
+      compact: function compact(rejector) {
+        var reject = !rejector ? function (v) {
+          return !!v;
+        } : function (v, i, a) {
+          return !rejector(v, i, a);
+        };
+        return this.transform(function (values) {
+          return values != null ? values.filter(reject) : values;
+        });
+      },
+      describe: function describe() {
+        var base = SchemaType.prototype.describe.call(this);
+        if (this.innerType) base.innerType = this.innerType.describe();
+        return base;
+      }
+    });
+
+    const dispositivoEsquema = ObjectSchema().shape({
+        denominacion: StringSchema()
+            .required("Debe dar una denominación al dispositivo"),
+        latitud: NumberSchema().typeError("Debe especificar un valor")
+            .max(90, "Valor máximo de 90")
+            .min(-90, "Valor mínimo de -90")
+            .required("Debe la latitud donde se encuentra el dispositivo"),
+        longitud: NumberSchema().typeError("Debe especificar un valor")
+            .max(180, "Valor máximo de 180")
+            .min(-180, "Valor mínimo de -180")
+            .required("Debe la longitud donde se encuentra el dispositivo")
+    });
+
+    // The numbers are in decimal degrees format and range from
+    // -90 to 90 for latitude and
+    // -180 to 180 for longitud
+
+    /* src/componentes/Dispositivo.svelte generated by Svelte v3.29.0 */
+
+    const { console: console_1 } = globals;
+    const file$b = "src/componentes/Dispositivo.svelte";
+
+    // (80:4) {#if dispositivo}
+    function create_if_block$3(ctx) {
+    	let p;
+    	let t0;
+    	let b;
+    	let t1_value = /*dispositivo*/ ctx[0].id + "";
+    	let t1;
+    	let t2;
+    	let form;
+    	let label0;
+    	let t4;
+    	let div0;
+    	let input0;
+    	let t5;
+    	let t6;
+    	let label1;
+    	let t8;
+    	let div1;
+    	let input1;
+    	let t9;
+    	let t10;
+    	let label2;
+    	let t12;
+    	let div2;
+    	let input2;
+    	let t13;
+    	let t14;
+    	let button;
     	let current;
     	let mounted;
     	let dispose;
-    	const default_slot_template = /*$$slots*/ ctx[21].default;
-    	const default_slot = create_slot(default_slot_template, ctx, /*$$scope*/ ctx[20], get_default_slot_context$1);
+    	let if_block0 = /*errores*/ ctx[2].denominacion && create_if_block_3(ctx);
+    	let if_block1 = /*errores*/ ctx[2].latitud && create_if_block_2(ctx);
+    	let if_block2 = /*errores*/ ctx[2].longitud && create_if_block_1$1(ctx);
+
+    	button = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				type: "submit",
+    				$$slots: { default: [create_default_slot_4$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
 
     	const block = {
     		c: function create() {
-    			form_1 = element("form");
-    			if (default_slot) default_slot.c();
-    			attr_dev(form_1, "class", "sveltejs-forms");
-    			add_location(form_1, file$b, 126, 0, 3070);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    			p = element("p");
+    			t0 = text("Id ");
+    			b = element("b");
+    			t1 = text(t1_value);
+    			t2 = space();
+    			form = element("form");
+    			label0 = element("label");
+    			label0.textContent = "Denominación";
+    			t4 = space();
+    			div0 = element("div");
+    			input0 = element("input");
+    			t5 = space();
+    			if (if_block0) if_block0.c();
+    			t6 = space();
+    			label1 = element("label");
+    			label1.textContent = "Latitud";
+    			t8 = space();
+    			div1 = element("div");
+    			input1 = element("input");
+    			t9 = space();
+    			if (if_block1) if_block1.c();
+    			t10 = space();
+    			label2 = element("label");
+    			label2.textContent = "Longitud";
+    			t12 = space();
+    			div2 = element("div");
+    			input2 = element("input");
+    			t13 = space();
+    			if (if_block2) if_block2.c();
+    			t14 = space();
+    			create_component(button.$$.fragment);
+    			add_location(b, file$b, 80, 15, 2455);
+    			add_location(p, file$b, 80, 8, 2448);
+    			attr_dev(label0, "for", "denominacion");
+    			add_location(label0, file$b, 82, 12, 2550);
+    			attr_dev(input0, "id", "denominacion");
+    			attr_dev(input0, "name", "denominacion");
+    			attr_dev(input0, "type", "text");
+    			attr_dev(input0, "placeholder", "denominación del dispositivo");
+    			add_location(input0, file$b, 84, 16, 2631);
+    			add_location(div0, file$b, 83, 12, 2609);
+    			attr_dev(label1, "for", "latitud");
+    			add_location(label1, file$b, 92, 12, 2969);
+    			attr_dev(input1, "id", "latitud");
+    			attr_dev(input1, "name", "latitud");
+    			attr_dev(input1, "type", "text");
+    			attr_dev(input1, "placeholder", "latitud del dispositivo");
+    			add_location(input1, file$b, 94, 16, 3040);
+    			add_location(div1, file$b, 93, 12, 3018);
+    			attr_dev(label2, "for", "longitud");
+    			add_location(label2, file$b, 102, 12, 3348);
+    			attr_dev(input2, "id", "longitud");
+    			attr_dev(input2, "name", "longitud");
+    			attr_dev(input2, "type", "text");
+    			attr_dev(input2, "placeholder", "longitud del dispositivo");
+    			add_location(input2, file$b, 104, 16, 3421);
+    			add_location(div2, file$b, 103, 12, 3399);
+    			add_location(form, file$b, 81, 8, 2496);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, form_1, anchor);
-
-    			if (default_slot) {
-    				default_slot.m(form_1, null);
-    			}
-
-    			/*form_1_binding*/ ctx[22](form_1);
+    			insert_dev(target, p, anchor);
+    			append_dev(p, t0);
+    			append_dev(p, b);
+    			append_dev(b, t1);
+    			insert_dev(target, t2, anchor);
+    			insert_dev(target, form, anchor);
+    			append_dev(form, label0);
+    			append_dev(form, t4);
+    			append_dev(form, div0);
+    			append_dev(div0, input0);
+    			set_input_value(input0, /*valores*/ ctx[1].denominacion);
+    			append_dev(div0, t5);
+    			if (if_block0) if_block0.m(div0, null);
+    			append_dev(form, t6);
+    			append_dev(form, label1);
+    			append_dev(form, t8);
+    			append_dev(form, div1);
+    			append_dev(div1, input1);
+    			set_input_value(input1, /*valores*/ ctx[1].latitud);
+    			append_dev(div1, t9);
+    			if (if_block1) if_block1.m(div1, null);
+    			append_dev(form, t10);
+    			append_dev(form, label2);
+    			append_dev(form, t12);
+    			append_dev(form, div2);
+    			append_dev(div2, input2);
+    			set_input_value(input2, /*valores*/ ctx[1].longitud);
+    			append_dev(div2, t13);
+    			if (if_block2) if_block2.m(div2, null);
+    			append_dev(form, t14);
+    			mount_component(button, form, null);
     			current = true;
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(form_1, "submit", prevent_default(/*handleSubmit*/ ctx[15]), false, true, false),
-    					listen_dev(form_1, "reset", /*handleResetClick*/ ctx[14], false, false, false)
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[5]),
+    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[6]),
+    					listen_dev(input2, "input", /*input2_input_handler*/ ctx[7]),
+    					listen_dev(form, "submit", prevent_default(/*guardar*/ ctx[3]), false, true, false)
     				];
 
     				mounted = true;
     			}
     		},
-    		p: function update(ctx, [dirty]) {
-    			if (default_slot) {
-    				if (default_slot.p && dirty & /*$$scope, $isSubmitting, isValid, $values, $errors, $touched*/ 1048637) {
-    					update_slot(default_slot, default_slot_template, ctx, /*$$scope*/ ctx[20], dirty, get_default_slot_changes$1, get_default_slot_context$1);
-    				}
+    		p: function update(ctx, dirty) {
+    			if ((!current || dirty & /*dispositivo*/ 1) && t1_value !== (t1_value = /*dispositivo*/ ctx[0].id + "")) set_data_dev(t1, t1_value);
+
+    			if (dirty & /*valores*/ 2 && input0.value !== /*valores*/ ctx[1].denominacion) {
+    				set_input_value(input0, /*valores*/ ctx[1].denominacion);
     			}
+
+    			if (/*errores*/ ctx[2].denominacion) {
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+    				} else {
+    					if_block0 = create_if_block_3(ctx);
+    					if_block0.c();
+    					if_block0.m(div0, null);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (dirty & /*valores*/ 2 && input1.value !== /*valores*/ ctx[1].latitud) {
+    				set_input_value(input1, /*valores*/ ctx[1].latitud);
+    			}
+
+    			if (/*errores*/ ctx[2].latitud) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block_2(ctx);
+    					if_block1.c();
+    					if_block1.m(div1, null);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
+    			if (dirty & /*valores*/ 2 && input2.value !== /*valores*/ ctx[1].longitud) {
+    				set_input_value(input2, /*valores*/ ctx[1].longitud);
+    			}
+
+    			if (/*errores*/ ctx[2].longitud) {
+    				if (if_block2) {
+    					if_block2.p(ctx, dirty);
+    				} else {
+    					if_block2 = create_if_block_1$1(ctx);
+    					if_block2.c();
+    					if_block2.m(div2, null);
+    				}
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
+    			}
+
+    			const button_changes = {};
+
+    			if (dirty & /*$$scope*/ 2048) {
+    				button_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button.$set(button_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(default_slot, local);
+    			transition_in(button.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(default_slot, local);
+    			transition_out(button.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(form_1);
-    			if (default_slot) default_slot.d(detaching);
-    			/*form_1_binding*/ ctx[22](null);
+    			if (detaching) detach_dev(p);
+    			if (detaching) detach_dev(t2);
+    			if (detaching) detach_dev(form);
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
+    			if (if_block2) if_block2.d();
+    			destroy_component(button);
     			mounted = false;
     			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$e.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    const FORM = {};
-
-    function instance$e($$self, $$props, $$invalidate) {
-    	let $values;
-    	let $touched;
-    	let $errors;
-    	let $validatedValues;
-    	let $isSubmitting;
-    	let { initialValues = {} } = $$props;
-    	let { schema = null } = $$props;
-    	let { validateOnChange = true } = $$props;
-    	let { validateOnBlur = true } = $$props;
-    	const dispatch = createEventDispatcher();
-    	const values = writable(createObjectWithDefaultValue());
-    	validate_store(values, "values");
-    	component_subscribe($$self, values, value => $$invalidate(2, $values = value));
-    	const validatedValues = writable({});
-    	validate_store(validatedValues, "validatedValues");
-    	component_subscribe($$self, validatedValues, value => $$invalidate(24, $validatedValues = value));
-    	const errors = writable({});
-    	validate_store(errors, "errors");
-    	component_subscribe($$self, errors, value => $$invalidate(4, $errors = value));
-    	const touched = writable({});
-    	validate_store(touched, "touched");
-    	component_subscribe($$self, touched, value => $$invalidate(3, $touched = value));
-    	const isSubmitting = writable(false);
-    	validate_store(isSubmitting, "isSubmitting");
-    	component_subscribe($$self, isSubmitting, value => $$invalidate(5, $isSubmitting = value));
-    	let isValid;
-    	let form;
-    	let fields;
-
-    	onMount(() => {
-    		fields = Array.from(form.querySelectorAll("input,textarea,select")).filter(el => !!el.name).map(el => ({ path: el.name })).reduce(
-    			(allElements, currentElement) => {
-    				const isCurrentElement = el => el.path === currentElement.path;
-    				const multiple = !!allElements.find(isCurrentElement);
-
-    				return [
-    					...allElements.filter(el => !isCurrentElement(el)),
-    					{ ...currentElement, multiple }
-    				];
-    			},
-    			[]
-    		);
-
-    		resetForm();
-    	});
-
-    	setContext(FORM, {
-    		touchField,
-    		setValue,
-    		validate,
-    		values,
-    		errors,
-    		touched,
-    		isSubmitting,
-    		validateOnBlur,
-    		validateOnChange
-    	});
-
-    	function resetForm(data) {
-    		fields.forEach(({ path, multiple }) => {
-    			set_store_value(values, $values = set($values, path, get(data ? data : initialValues, path, multiple ? [] : "")));
-    			set_store_value(touched, $touched = set($touched, path, false));
-    		});
-
-    		set_store_value(errors, $errors = {});
-    		set_store_value(validatedValues, $validatedValues = {});
-    		$$invalidate(0, isValid = undefined);
-    	}
-
-    	async function validate() {
-    		if (!schema) {
-    			$$invalidate(0, isValid = true);
-    			return;
-    		}
-
-    		try {
-    			set_store_value(validatedValues, $validatedValues = await schema.validate(deepCopy($values), { abortEarly: false, stripUnknown: true }));
-    			set_store_value(errors, $errors = {});
-    			$$invalidate(0, isValid = true);
-    		} catch(err) {
-    			set_store_value(errors, $errors = {});
-
-    			err.inner.forEach(error => {
-    				set_store_value(errors, $errors = set($errors, error.path, error.message));
-    			});
-
-    			$$invalidate(0, isValid = false);
-    		}
-    	}
-
-    	function touchField(path, shouldValidate = false) {
-    		if (validateOnBlur || shouldValidate) {
-    			set_store_value(touched, $touched = set($touched, path, true));
-    			validate();
-    		}
-    	}
-
-    	function setValue(path, value, validateForm = true) {
-    		set_store_value(values, $values = set($values, path, value));
-    		set_store_value(touched, $touched = set($touched, path, true));
-
-    		if (validateForm && validateOnChange) {
-    			validate();
-    		}
-    	}
-
-    	function handleResetClick() {
-    		resetForm();
-    		dispatch("reset");
-    	}
-
-    	async function handleSubmit() {
-    		fields.forEach(({ path }) => set_store_value(touched, $touched = set($touched, path, true)));
-    		await validate();
-
-    		if (!schema || isValid) {
-    			set_store_value(isSubmitting, $isSubmitting = true);
-
-    			dispatch("submit", {
-    				values: schema ? { ...$validatedValues } : { ...$values },
-    				setSubmitting: value => set_store_value(isSubmitting, $isSubmitting = value),
-    				resetForm
-    			});
-    		}
-    	}
-
-    	const writable_props = ["initialValues", "schema", "validateOnChange", "validateOnBlur"];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Form> was created with unknown prop '${key}'`);
-    	});
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Form", $$slots, ['default']);
-
-    	function form_1_binding($$value) {
-    		binding_callbacks[$$value ? "unshift" : "push"](() => {
-    			form = $$value;
-    			$$invalidate(1, form);
-    		});
-    	}
-
-    	$$self.$$set = $$props => {
-    		if ("initialValues" in $$props) $$invalidate(16, initialValues = $$props.initialValues);
-    		if ("schema" in $$props) $$invalidate(17, schema = $$props.schema);
-    		if ("validateOnChange" in $$props) $$invalidate(18, validateOnChange = $$props.validateOnChange);
-    		if ("validateOnBlur" in $$props) $$invalidate(19, validateOnBlur = $$props.validateOnBlur);
-    		if ("$$scope" in $$props) $$invalidate(20, $$scope = $$props.$$scope);
-    	};
-
-    	$$self.$capture_state = () => ({
-    		FORM,
-    		setContext,
-    		createEventDispatcher,
-    		onMount,
-    		writable,
-    		set,
-    		get,
-    		createObjectWithDefaultValue,
-    		deepCopy,
-    		initialValues,
-    		schema,
-    		validateOnChange,
-    		validateOnBlur,
-    		dispatch,
-    		values,
-    		validatedValues,
-    		errors,
-    		touched,
-    		isSubmitting,
-    		isValid,
-    		form,
-    		fields,
-    		resetForm,
-    		validate,
-    		touchField,
-    		setValue,
-    		handleResetClick,
-    		handleSubmit,
-    		$values,
-    		$touched,
-    		$errors,
-    		$validatedValues,
-    		$isSubmitting
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ("initialValues" in $$props) $$invalidate(16, initialValues = $$props.initialValues);
-    		if ("schema" in $$props) $$invalidate(17, schema = $$props.schema);
-    		if ("validateOnChange" in $$props) $$invalidate(18, validateOnChange = $$props.validateOnChange);
-    		if ("validateOnBlur" in $$props) $$invalidate(19, validateOnBlur = $$props.validateOnBlur);
-    		if ("isValid" in $$props) $$invalidate(0, isValid = $$props.isValid);
-    		if ("form" in $$props) $$invalidate(1, form = $$props.form);
-    		if ("fields" in $$props) fields = $$props.fields;
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [
-    		isValid,
-    		form,
-    		$values,
-    		$touched,
-    		$errors,
-    		$isSubmitting,
-    		values,
-    		validatedValues,
-    		errors,
-    		touched,
-    		isSubmitting,
-    		validate,
-    		touchField,
-    		setValue,
-    		handleResetClick,
-    		handleSubmit,
-    		initialValues,
-    		schema,
-    		validateOnChange,
-    		validateOnBlur,
-    		$$scope,
-    		$$slots,
-    		form_1_binding
-    	];
-    }
-
-    class Form extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-
-    		init(this, options, instance$e, create_fragment$e, safe_not_equal, {
-    			initialValues: 16,
-    			schema: 17,
-    			validateOnChange: 18,
-    			validateOnBlur: 19
-    		});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Form",
-    			options,
-    			id: create_fragment$e.name
-    		});
-    	}
-
-    	get initialValues() {
-    		throw new Error("<Form>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set initialValues(value) {
-    		throw new Error("<Form>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get schema() {
-    		throw new Error("<Form>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set schema(value) {
-    		throw new Error("<Form>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get validateOnChange() {
-    		throw new Error("<Form>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set validateOnChange(value) {
-    		throw new Error("<Form>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get validateOnBlur() {
-    		throw new Error("<Form>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set validateOnBlur(value) {
-    		throw new Error("<Form>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    /* home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Input.svelte generated by Svelte v3.24.1 */
-    const file$c = "home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Input.svelte";
-
-    // (27:2) {#if label}
-    function create_if_block_2(ctx) {
-    	let label_1;
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			label_1 = element("label");
-    			t = text(/*label*/ ctx[1]);
-    			attr_dev(label_1, "for", /*name*/ ctx[0]);
-    			add_location(label_1, file$c, 27, 4, 659);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, label_1, anchor);
-    			append_dev(label_1, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*label*/ 2) set_data_dev(t, /*label*/ ctx[1]);
-
-    			if (dirty & /*name*/ 1) {
-    				attr_dev(label_1, "for", /*name*/ ctx[0]);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(label_1);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_2.name,
-    		type: "if",
-    		source: "(27:2) {#if label}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (39:2) {:else}
-    function create_else_block$2(ctx) {
-    	let input;
-    	let input_value_value;
-    	let mounted;
-    	let dispose;
-
-    	let input_levels = [
-    		{ name: /*name*/ ctx[0] },
-    		{ type: /*type*/ ctx[2] },
-    		{ id: /*name*/ ctx[0] },
-    		{
-    			value: input_value_value = get(/*$values*/ ctx[6], /*name*/ ctx[0])
-    		},
-    		/*$$restProps*/ ctx[12]
-    	];
-
-    	let input_data = {};
-
-    	for (let i = 0; i < input_levels.length; i += 1) {
-    		input_data = assign(input_data, input_levels[i]);
-    	}
-
-    	const block = {
-    		c: function create() {
-    			input = element("input");
-    			set_attributes(input, input_data);
-    			add_location(input, file$c, 39, 4, 934);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, input, anchor);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input, "blur", /*onBlur*/ ctx[11], false, false, false),
-    					listen_dev(input, "change", /*onChange*/ ctx[10], false, false, false),
-    					listen_dev(
-    						input,
-    						"input",
-    						function () {
-    							if (is_function(get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && /*onChange*/ ctx[10])) (get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && /*onChange*/ ctx[10]).apply(this, arguments);
-    						},
-    						false,
-    						false,
-    						false
-    					)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(new_ctx, dirty) {
-    			ctx = new_ctx;
-
-    			set_attributes(input, input_data = get_spread_update(input_levels, [
-    				dirty & /*name*/ 1 && { name: /*name*/ ctx[0] },
-    				dirty & /*type*/ 4 && { type: /*type*/ ctx[2] },
-    				dirty & /*name*/ 1 && { id: /*name*/ ctx[0] },
-    				dirty & /*$values, name*/ 65 && input_value_value !== (input_value_value = get(/*$values*/ ctx[6], /*name*/ ctx[0])) && input.value !== input_value_value && { value: input_value_value },
-    				dirty & /*$$restProps*/ 4096 && /*$$restProps*/ ctx[12]
-    			]));
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(input);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block$2.name,
-    		type: "else",
-    		source: "(39:2) {:else}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (30:2) {#if multiline}
-    function create_if_block_1$1(ctx) {
-    	let textarea;
-    	let textarea_value_value;
-    	let mounted;
-    	let dispose;
-
-    	let textarea_levels = [
-    		{ name: /*name*/ ctx[0] },
-    		{ id: /*name*/ ctx[0] },
-    		{
-    			value: textarea_value_value = get(/*$values*/ ctx[6], /*name*/ ctx[0])
-    		},
-    		/*$$restProps*/ ctx[12]
-    	];
-
-    	let textarea_data = {};
-
-    	for (let i = 0; i < textarea_levels.length; i += 1) {
-    		textarea_data = assign(textarea_data, textarea_levels[i]);
-    	}
-
-    	const block = {
-    		c: function create() {
-    			textarea = element("textarea");
-    			set_attributes(textarea, textarea_data);
-    			add_location(textarea, file$c, 30, 4, 723);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, textarea, anchor);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(textarea, "blur", /*onBlur*/ ctx[11], false, false, false),
-    					listen_dev(textarea, "change", /*onChange*/ ctx[10], false, false, false),
-    					listen_dev(
-    						textarea,
-    						"input",
-    						function () {
-    							if (is_function(get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && /*onChange*/ ctx[10])) (get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && /*onChange*/ ctx[10]).apply(this, arguments);
-    						},
-    						false,
-    						false,
-    						false
-    					)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(new_ctx, dirty) {
-    			ctx = new_ctx;
-
-    			set_attributes(textarea, textarea_data = get_spread_update(textarea_levels, [
-    				dirty & /*name*/ 1 && { name: /*name*/ ctx[0] },
-    				dirty & /*name*/ 1 && { id: /*name*/ ctx[0] },
-    				dirty & /*$values, name*/ 65 && textarea_value_value !== (textarea_value_value = get(/*$values*/ ctx[6], /*name*/ ctx[0])) && { value: textarea_value_value },
-    				dirty & /*$$restProps*/ 4096 && /*$$restProps*/ ctx[12]
-    			]));
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(textarea);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1$1.name,
-    		type: "if",
-    		source: "(30:2) {#if multiline}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (50:2) {#if get($touched, name) && get($errors, name)}
-    function create_if_block$3(ctx) {
-    	let div;
-    	let t_value = get(/*$errors*/ ctx[5], /*name*/ ctx[0]) + "";
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
-    			t = text(t_value);
-    			attr_dev(div, "class", "message");
-    			add_location(div, file$c, 50, 4, 1203);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*$errors, name*/ 33 && t_value !== (t_value = get(/*$errors*/ ctx[5], /*name*/ ctx[0]) + "")) set_data_dev(t, t_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
     		}
     	};
 
@@ -10776,1633 +16362,119 @@ var app = (function (L) {
     		block,
     		id: create_if_block$3.name,
     		type: "if",
-    		source: "(50:2) {#if get($touched, name) && get($errors, name)}",
+    		source: "(80:4) {#if dispositivo}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$f(ctx) {
-    	let div;
-    	let t0;
-    	let t1;
-    	let show_if = get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && get(/*$errors*/ ctx[5], /*name*/ ctx[0]);
-    	let if_block0 = /*label*/ ctx[1] && create_if_block_2(ctx);
-
-    	function select_block_type(ctx, dirty) {
-    		if (/*multiline*/ ctx[3]) return create_if_block_1$1;
-    		return create_else_block$2;
-    	}
-
-    	let current_block_type = select_block_type(ctx);
-    	let if_block1 = current_block_type(ctx);
-    	let if_block2 = show_if && create_if_block$3(ctx);
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
-    			if (if_block0) if_block0.c();
-    			t0 = space();
-    			if_block1.c();
-    			t1 = space();
-    			if (if_block2) if_block2.c();
-    			attr_dev(div, "class", "field");
-    			toggle_class(div, "error", get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && get(/*$errors*/ ctx[5], /*name*/ ctx[0]));
-    			add_location(div, file$c, 25, 0, 565);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			if (if_block0) if_block0.m(div, null);
-    			append_dev(div, t0);
-    			if_block1.m(div, null);
-    			append_dev(div, t1);
-    			if (if_block2) if_block2.m(div, null);
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (/*label*/ ctx[1]) {
-    				if (if_block0) {
-    					if_block0.p(ctx, dirty);
-    				} else {
-    					if_block0 = create_if_block_2(ctx);
-    					if_block0.c();
-    					if_block0.m(div, t0);
-    				}
-    			} else if (if_block0) {
-    				if_block0.d(1);
-    				if_block0 = null;
-    			}
-
-    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block1) {
-    				if_block1.p(ctx, dirty);
-    			} else {
-    				if_block1.d(1);
-    				if_block1 = current_block_type(ctx);
-
-    				if (if_block1) {
-    					if_block1.c();
-    					if_block1.m(div, t1);
-    				}
-    			}
-
-    			if (dirty & /*$touched, name, $errors*/ 49) show_if = get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && get(/*$errors*/ ctx[5], /*name*/ ctx[0]);
-
-    			if (show_if) {
-    				if (if_block2) {
-    					if_block2.p(ctx, dirty);
-    				} else {
-    					if_block2 = create_if_block$3(ctx);
-    					if_block2.c();
-    					if_block2.m(div, null);
-    				}
-    			} else if (if_block2) {
-    				if_block2.d(1);
-    				if_block2 = null;
-    			}
-
-    			if (dirty & /*get, $touched, name, $errors*/ 49) {
-    				toggle_class(div, "error", get(/*$touched*/ ctx[4], /*name*/ ctx[0]) && get(/*$errors*/ ctx[5], /*name*/ ctx[0]));
-    			}
-    		},
-    		i: noop,
-    		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    			if (if_block0) if_block0.d();
-    			if_block1.d();
-    			if (if_block2) if_block2.d();
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$f.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$f($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["name","label","type","multiline"];
-    	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let $touched;
-    	let $errors;
-    	let $values;
-    	let { name } = $$props;
-    	let { label = "" } = $$props;
-    	let { type = "text" } = $$props;
-    	let { multiline = false } = $$props;
-    	const { touchField, setValue, values, errors, touched } = getContext(FORM);
-    	validate_store(values, "values");
-    	component_subscribe($$self, values, value => $$invalidate(6, $values = value));
-    	validate_store(errors, "errors");
-    	component_subscribe($$self, errors, value => $$invalidate(5, $errors = value));
-    	validate_store(touched, "touched");
-    	component_subscribe($$self, touched, value => $$invalidate(4, $touched = value));
-
-    	function onChange(event) {
-    		setValue(name, event.target.value);
-    	}
-
-    	function onBlur() {
-    		touchField(name);
-    	}
-
-    	if (Object.keys($$restProps).includes("value")) {
-    		setTimeout(() => setValue(name, $$restProps.value, false), 0);
-    	}
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Input", $$slots, []);
-
-    	$$self.$$set = $$new_props => {
-    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(12, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("name" in $$new_props) $$invalidate(0, name = $$new_props.name);
-    		if ("label" in $$new_props) $$invalidate(1, label = $$new_props.label);
-    		if ("type" in $$new_props) $$invalidate(2, type = $$new_props.type);
-    		if ("multiline" in $$new_props) $$invalidate(3, multiline = $$new_props.multiline);
-    	};
-
-    	$$self.$capture_state = () => ({
-    		getContext,
-    		get,
-    		FORM,
-    		name,
-    		label,
-    		type,
-    		multiline,
-    		touchField,
-    		setValue,
-    		values,
-    		errors,
-    		touched,
-    		onChange,
-    		onBlur,
-    		$touched,
-    		$errors,
-    		$values
-    	});
-
-    	$$self.$inject_state = $$new_props => {
-    		if ("name" in $$props) $$invalidate(0, name = $$new_props.name);
-    		if ("label" in $$props) $$invalidate(1, label = $$new_props.label);
-    		if ("type" in $$props) $$invalidate(2, type = $$new_props.type);
-    		if ("multiline" in $$props) $$invalidate(3, multiline = $$new_props.multiline);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [
-    		name,
-    		label,
-    		type,
-    		multiline,
-    		$touched,
-    		$errors,
-    		$values,
-    		values,
-    		errors,
-    		touched,
-    		onChange,
-    		onBlur,
-    		$$restProps
-    	];
-    }
-
-    class Input extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$f, create_fragment$f, safe_not_equal, { name: 0, label: 1, type: 2, multiline: 3 });
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Input",
-    			options,
-    			id: create_fragment$f.name
-    		});
-
-    		const { ctx } = this.$$;
-    		const props = options.props || {};
-
-    		if (/*name*/ ctx[0] === undefined && !("name" in props)) {
-    			console.warn("<Input> was created without expected prop 'name'");
-    		}
-    	}
-
-    	get name() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set name(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get label() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set label(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get type() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set type(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get multiline() {
-    		throw new Error("<Input>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set multiline(value) {
-    		throw new Error("<Input>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    /* home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Select.svelte generated by Svelte v3.24.1 */
-    const file$d = "home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Select.svelte";
-
-    function get_each_context$1(ctx, list, i) {
-    	const child_ctx = ctx.slice();
-    	child_ctx[14] = list[i];
-    	return child_ctx;
-    }
-
-    // (26:2) {#if label}
-    function create_if_block_1$2(ctx) {
-    	let label_1;
+    // (91:16) {#if errores.denominacion}
+    function create_if_block_3(ctx) {
+    	let t_value = /*errores*/ ctx[2].denominacion + "";
     	let t;
 
     	const block = {
     		c: function create() {
-    			label_1 = element("label");
-    			t = text(/*label*/ ctx[1]);
-    			attr_dev(label_1, "for", /*name*/ ctx[0]);
-    			add_location(label_1, file$d, 26, 4, 621);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, label_1, anchor);
-    			append_dev(label_1, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*label*/ 2) set_data_dev(t, /*label*/ ctx[1]);
-
-    			if (dirty & /*name, options*/ 5) {
-    				attr_dev(label_1, "for", /*name*/ ctx[0]);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(label_1);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1$2.name,
-    		type: "if",
-    		source: "(26:2) {#if label}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (37:4) {#each options as option}
-    function create_each_block$1(ctx) {
-    	let option;
-    	let t0_value = /*option*/ ctx[14].title + "";
-    	let t0;
-    	let t1;
-    	let option_value_value;
-    	let option_selected_value;
-
-    	const block = {
-    		c: function create() {
-    			option = element("option");
-    			t0 = text(t0_value);
-    			t1 = space();
-    			option.__value = option_value_value = /*option*/ ctx[14].id;
-    			option.value = option.__value;
-    			option.selected = option_selected_value = get(/*$values*/ ctx[5], /*name*/ ctx[0]) === /*option*/ ctx[14].id;
-    			add_location(option, file$d, 37, 6, 857);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, option, anchor);
-    			append_dev(option, t0);
-    			append_dev(option, t1);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*options*/ 4 && t0_value !== (t0_value = /*option*/ ctx[14].title + "")) set_data_dev(t0, t0_value);
-
-    			if (dirty & /*options*/ 4 && option_value_value !== (option_value_value = /*option*/ ctx[14].id)) {
-    				prop_dev(option, "__value", option_value_value);
-    				option.value = option.__value;
-    			}
-
-    			if (dirty & /*$values, name, options*/ 37 && option_selected_value !== (option_selected_value = get(/*$values*/ ctx[5], /*name*/ ctx[0]) === /*option*/ ctx[14].id)) {
-    				prop_dev(option, "selected", option_selected_value);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(option);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_each_block$1.name,
-    		type: "each",
-    		source: "(37:4) {#each options as option}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (43:2) {#if get($touched, name) && get($errors, name)}
-    function create_if_block$4(ctx) {
-    	let div;
-    	let t_value = get(/*$errors*/ ctx[4], /*name*/ ctx[0]) + "";
-    	let t;
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
     			t = text(t_value);
-    			attr_dev(div, "class", "message");
-    			add_location(div, file$d, 43, 4, 1045);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*$errors, name*/ 17 && t_value !== (t_value = get(/*$errors*/ ctx[4], /*name*/ ctx[0]) + "")) set_data_dev(t, t_value);
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block$4.name,
-    		type: "if",
-    		source: "(43:2) {#if get($touched, name) && get($errors, name)}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function create_fragment$g(ctx) {
-    	let div;
-    	let t0;
-    	let select;
-    	let option;
-    	let select_value_value;
-    	let t1;
-    	let show_if = get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]);
-    	let mounted;
-    	let dispose;
-    	let if_block0 = /*label*/ ctx[1] && create_if_block_1$2(ctx);
-    	let each_value = /*options*/ ctx[2];
-    	validate_each_argument(each_value);
-    	let each_blocks = [];
-
-    	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
-    	}
-
-    	let select_levels = [
-    		{ name: /*name*/ ctx[0] },
-    		{ id: /*name*/ ctx[0] },
-    		{
-    			value: select_value_value = get(/*$values*/ ctx[5], /*name*/ ctx[0])
-    		},
-    		/*$$restProps*/ ctx[11]
-    	];
-
-    	let select_data = {};
-
-    	for (let i = 0; i < select_levels.length; i += 1) {
-    		select_data = assign(select_data, select_levels[i]);
-    	}
-
-    	let if_block1 = show_if && create_if_block$4(ctx);
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
-    			if (if_block0) if_block0.c();
-    			t0 = space();
-    			select = element("select");
-    			option = element("option");
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].c();
-    			}
-
-    			t1 = space();
-    			if (if_block1) if_block1.c();
-    			option.__value = "";
-    			option.value = option.__value;
-    			add_location(option, file$d, 35, 4, 801);
-    			set_attributes(select, select_data);
-    			add_location(select, file$d, 28, 2, 665);
-    			attr_dev(div, "class", "field");
-    			toggle_class(div, "error", get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]));
-    			add_location(div, file$d, 24, 0, 527);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			if (if_block0) if_block0.m(div, null);
-    			append_dev(div, t0);
-    			append_dev(div, select);
-    			append_dev(select, option);
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].m(select, null);
-    			}
-
-    			if (select_data.multiple) select_options(select, select_data.value);
-    			append_dev(div, t1);
-    			if (if_block1) if_block1.m(div, null);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(select, "change", /*onChange*/ ctx[9], false, false, false),
-    					listen_dev(select, "blur", /*onBlur*/ ctx[10], false, false, false)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (/*label*/ ctx[1]) {
-    				if (if_block0) {
-    					if_block0.p(ctx, dirty);
-    				} else {
-    					if_block0 = create_if_block_1$2(ctx);
-    					if_block0.c();
-    					if_block0.m(div, t0);
-    				}
-    			} else if (if_block0) {
-    				if_block0.d(1);
-    				if_block0 = null;
-    			}
-
-    			if (dirty & /*options, get, $values, name*/ 37) {
-    				each_value = /*options*/ ctx[2];
-    				validate_each_argument(each_value);
-    				let i;
-
-    				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$1(ctx, each_value, i);
-
-    					if (each_blocks[i]) {
-    						each_blocks[i].p(child_ctx, dirty);
-    					} else {
-    						each_blocks[i] = create_each_block$1(child_ctx);
-    						each_blocks[i].c();
-    						each_blocks[i].m(select, null);
-    					}
-    				}
-
-    				for (; i < each_blocks.length; i += 1) {
-    					each_blocks[i].d(1);
-    				}
-
-    				each_blocks.length = each_value.length;
-    			}
-
-    			set_attributes(select, select_data = get_spread_update(select_levels, [
-    				dirty & /*name*/ 1 && { name: /*name*/ ctx[0] },
-    				dirty & /*name*/ 1 && { id: /*name*/ ctx[0] },
-    				dirty & /*$values, name*/ 33 && select_value_value !== (select_value_value = get(/*$values*/ ctx[5], /*name*/ ctx[0])) && { value: select_value_value },
-    				dirty & /*$$restProps*/ 2048 && /*$$restProps*/ ctx[11]
-    			]));
-
-    			if (dirty & /*name, get, $values, $$restProps*/ 2081 && select_data.multiple) select_options(select, select_data.value);
-    			if (dirty & /*$touched, name, $errors*/ 25) show_if = get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]);
-
-    			if (show_if) {
-    				if (if_block1) {
-    					if_block1.p(ctx, dirty);
-    				} else {
-    					if_block1 = create_if_block$4(ctx);
-    					if_block1.c();
-    					if_block1.m(div, null);
-    				}
-    			} else if (if_block1) {
-    				if_block1.d(1);
-    				if_block1 = null;
-    			}
-
-    			if (dirty & /*get, $touched, name, $errors*/ 25) {
-    				toggle_class(div, "error", get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]));
-    			}
-    		},
-    		i: noop,
-    		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    			if (if_block0) if_block0.d();
-    			destroy_each(each_blocks, detaching);
-    			if (if_block1) if_block1.d();
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$g.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$g($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["name","label","options"];
-    	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let $touched;
-    	let $errors;
-    	let $values;
-    	let { name } = $$props;
-    	let { label = "" } = $$props;
-    	let { options } = $$props;
-    	const { touchField, setValue, values, errors, touched } = getContext(FORM);
-    	validate_store(values, "values");
-    	component_subscribe($$self, values, value => $$invalidate(5, $values = value));
-    	validate_store(errors, "errors");
-    	component_subscribe($$self, errors, value => $$invalidate(4, $errors = value));
-    	validate_store(touched, "touched");
-    	component_subscribe($$self, touched, value => $$invalidate(3, $touched = value));
-
-    	function onChange(event) {
-    		setValue(name, event.target.value);
-    	}
-
-    	function onBlur() {
-    		touchField(name);
-    	}
-
-    	if (Object.keys($$restProps).includes("value")) {
-    		setTimeout(() => setValue(name, $$restProps.value, false), 0);
-    	}
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Select", $$slots, []);
-
-    	$$self.$$set = $$new_props => {
-    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(11, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("name" in $$new_props) $$invalidate(0, name = $$new_props.name);
-    		if ("label" in $$new_props) $$invalidate(1, label = $$new_props.label);
-    		if ("options" in $$new_props) $$invalidate(2, options = $$new_props.options);
-    	};
-
-    	$$self.$capture_state = () => ({
-    		getContext,
-    		get,
-    		FORM,
-    		name,
-    		label,
-    		options,
-    		touchField,
-    		setValue,
-    		values,
-    		errors,
-    		touched,
-    		onChange,
-    		onBlur,
-    		$touched,
-    		$errors,
-    		$values
-    	});
-
-    	$$self.$inject_state = $$new_props => {
-    		if ("name" in $$props) $$invalidate(0, name = $$new_props.name);
-    		if ("label" in $$props) $$invalidate(1, label = $$new_props.label);
-    		if ("options" in $$props) $$invalidate(2, options = $$new_props.options);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [
-    		name,
-    		label,
-    		options,
-    		$touched,
-    		$errors,
-    		$values,
-    		values,
-    		errors,
-    		touched,
-    		onChange,
-    		onBlur,
-    		$$restProps
-    	];
-    }
-
-    class Select extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$g, create_fragment$g, safe_not_equal, { name: 0, label: 1, options: 2 });
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Select",
-    			options,
-    			id: create_fragment$g.name
-    		});
-
-    		const { ctx } = this.$$;
-    		const props = options.props || {};
-
-    		if (/*name*/ ctx[0] === undefined && !("name" in props)) {
-    			console.warn("<Select> was created without expected prop 'name'");
-    		}
-
-    		if (/*options*/ ctx[2] === undefined && !("options" in props)) {
-    			console.warn("<Select> was created without expected prop 'options'");
-    		}
-    	}
-
-    	get name() {
-    		throw new Error("<Select>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set name(value) {
-    		throw new Error("<Select>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get label() {
-    		throw new Error("<Select>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set label(value) {
-    		throw new Error("<Select>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get options() {
-    		throw new Error("<Select>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set options(value) {
-    		throw new Error("<Select>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    function writableDerived(origins, derive, reflect, initial) {
-    	var childDerivedSetter, originValues, allowDerive = true;
-    	var reflectOldValues = "withOld" in reflect;
-    	var wrappedDerive = (got, set) => {
-    		childDerivedSetter = set;
-    		if (reflectOldValues) {
-    			originValues = got;
-    		}
-    		if (allowDerive) {
-    			let returned = derive(got, set);
-    			if (derive.length < 2) {
-    				set(returned);
-    			} else {
-    				return returned;
-    			}
-    		}
-    	};
-    	var childDerived = derived(origins, wrappedDerive, initial);
-    	
-    	var singleOrigin = !Array.isArray(origins);
-    	var sendUpstream = (setWith) => {
-    		allowDerive = false;
-    		if (singleOrigin) {
-    			origins.set(setWith);
-    		} else {
-    			setWith.forEach( (value, i) => {
-    				origins[i].set(value);
-    			} );
-    		}
-    		allowDerive = true;
-    	};
-    	if (reflectOldValues) {
-    		reflect = reflect.withOld;
-    	}
-    	var reflectIsAsync = reflect.length >= (reflectOldValues ? 3 : 2);
-    	var cleanup = null;
-    	function doReflect(reflecting) {
-    		if (cleanup) {
-    			cleanup();
-    			cleanup = null;
-    		}
-
-    		if (reflectOldValues) {
-    			var returned = reflect(reflecting, originValues, sendUpstream);
-    		} else {
-    			var returned = reflect(reflecting, sendUpstream);
-    		}
-    		if (reflectIsAsync) {
-    			if (typeof returned == "function") {
-    				cleanup = returned;
-    			}
-    		} else {
-    			sendUpstream(returned);
-    		}
-    	}
-    	
-    	var doneUpdateId = 0;
-    	function update(fn) {
-    		var tryingSet = false, isUpdated, updateId = doneUpdateId + 1, oldValue;
-    		var unsubscribe = childDerived.subscribe( (value) => {
-    			if (!tryingSet) {
-    				oldValue = value;
-    			} else {
-    				isUpdated = true;
-    			}
-    		} );
-    		var newValue = fn(oldValue);
-    		tryingSet = true;
-    		childDerivedSetter(newValue);
-    		unsubscribe();
-    		if (isUpdated && updateId > doneUpdateId) {
-    			doneUpdateId = updateId;
-    			doReflect(newValue);
-    		}
-    	}
-    	return {
-    		subscribe: childDerived.subscribe,
-    		set(value) { update( () => value ); },
-    		update,
-    	};
-    }
-
-    /* home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Choice.svelte generated by Svelte v3.24.1 */
-    const file$e = "home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/sveltejs-forms/src/components/Choice.svelte";
-
-    function get_each_context$2(ctx, list, i) {
-    	const child_ctx = ctx.slice();
-    	child_ctx[20] = list[i];
-    	return child_ctx;
-    }
-
-    // (50:4) {:else}
-    function create_else_block$3(ctx) {
-    	let input;
-    	let input_id_value;
-    	let input_value_value;
-    	let mounted;
-    	let dispose;
-
-    	let input_levels = [
-    		{
-    			id: input_id_value = "" + (/*name*/ ctx[0] + "-" + /*option*/ ctx[20].id)
-    		},
-    		{ type: "radio" },
-    		{ name: /*name*/ ctx[0] },
-    		{
-    			__value: input_value_value = /*option*/ ctx[20].id
-    		},
-    		/*$$restProps*/ ctx[12]
-    	];
-
-    	let input_data = {};
-
-    	for (let i = 0; i < input_levels.length; i += 1) {
-    		input_data = assign(input_data, input_levels[i]);
-    	}
-
-    	const block = {
-    		c: function create() {
-    			input = element("input");
-    			set_attributes(input, input_data);
-    			/*$$binding_groups*/ ctx[15][0].push(input);
-    			add_location(input, file$e, 50, 6, 1130);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, input, anchor);
-    			input.checked = input.__value === /*$choice*/ ctx[5];
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input, "change", /*input_change_handler_1*/ ctx[16]),
-    					listen_dev(input, "change", /*onChange*/ ctx[10], false, false, false),
-    					listen_dev(input, "blur", /*onBlur*/ ctx[11], false, false, false)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, dirty) {
-    			set_attributes(input, input_data = get_spread_update(input_levels, [
-    				dirty & /*name, options*/ 3 && input_id_value !== (input_id_value = "" + (/*name*/ ctx[0] + "-" + /*option*/ ctx[20].id)) && { id: input_id_value },
-    				{ type: "radio" },
-    				dirty & /*name*/ 1 && { name: /*name*/ ctx[0] },
-    				dirty & /*options*/ 2 && input_value_value !== (input_value_value = /*option*/ ctx[20].id) && { __value: input_value_value },
-    				dirty & /*$$restProps*/ 4096 && /*$$restProps*/ ctx[12]
-    			]));
-
-    			if (dirty & /*$choice*/ 32) {
-    				input.checked = input.__value === /*$choice*/ ctx[5];
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(input);
-    			/*$$binding_groups*/ ctx[15][0].splice(/*$$binding_groups*/ ctx[15][0].indexOf(input), 1);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block$3.name,
-    		type: "else",
-    		source: "(50:4) {:else}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (40:4) {#if multiple}
-    function create_if_block_2$1(ctx) {
-    	let input;
-    	let input_id_value;
-    	let input_value_value;
-    	let mounted;
-    	let dispose;
-
-    	let input_levels = [
-    		{
-    			id: input_id_value = "" + (/*name*/ ctx[0] + "-" + /*option*/ ctx[20].id)
-    		},
-    		{ type: "checkbox" },
-    		{ name: /*name*/ ctx[0] },
-    		{
-    			__value: input_value_value = /*option*/ ctx[20].id
-    		},
-    		/*$$restProps*/ ctx[12]
-    	];
-
-    	let input_data = {};
-
-    	for (let i = 0; i < input_levels.length; i += 1) {
-    		input_data = assign(input_data, input_levels[i]);
-    	}
-
-    	const block = {
-    		c: function create() {
-    			input = element("input");
-    			set_attributes(input, input_data);
-    			/*$$binding_groups*/ ctx[15][0].push(input);
-    			add_location(input, file$e, 40, 6, 897);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, input, anchor);
-    			input.checked = ~/*$choice*/ ctx[5].indexOf(input.__value);
-
-    			if (!mounted) {
-    				dispose = [
-    					listen_dev(input, "change", /*input_change_handler*/ ctx[14]),
-    					listen_dev(input, "change", /*onChange*/ ctx[10], false, false, false),
-    					listen_dev(input, "blur", /*onBlur*/ ctx[11], false, false, false)
-    				];
-
-    				mounted = true;
-    			}
-    		},
-    		p: function update(ctx, dirty) {
-    			set_attributes(input, input_data = get_spread_update(input_levels, [
-    				dirty & /*name, options*/ 3 && input_id_value !== (input_id_value = "" + (/*name*/ ctx[0] + "-" + /*option*/ ctx[20].id)) && { id: input_id_value },
-    				{ type: "checkbox" },
-    				dirty & /*name*/ 1 && { name: /*name*/ ctx[0] },
-    				dirty & /*options*/ 2 && input_value_value !== (input_value_value = /*option*/ ctx[20].id) && { __value: input_value_value },
-    				dirty & /*$$restProps*/ 4096 && /*$$restProps*/ ctx[12]
-    			]));
-
-    			if (dirty & /*$choice*/ 32) {
-    				input.checked = ~/*$choice*/ ctx[5].indexOf(input.__value);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(input);
-    			/*$$binding_groups*/ ctx[15][0].splice(/*$$binding_groups*/ ctx[15][0].indexOf(input), 1);
-    			mounted = false;
-    			run_all(dispose);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_2$1.name,
-    		type: "if",
-    		source: "(40:4) {#if multiple}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (61:4) {#if option.title}
-    function create_if_block_1$3(ctx) {
-    	let label;
-    	let t_value = /*option*/ ctx[20].title + "";
-    	let t;
-    	let label_for_value;
-
-    	const block = {
-    		c: function create() {
-    			label = element("label");
-    			t = text(t_value);
-    			attr_dev(label, "for", label_for_value = /*option*/ ctx[20].id);
-    			add_location(label, file$e, 61, 6, 1381);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, label, anchor);
-    			append_dev(label, t);
-    		},
-    		p: function update(ctx, dirty) {
-    			if (dirty & /*options*/ 2 && t_value !== (t_value = /*option*/ ctx[20].title + "")) set_data_dev(t, t_value);
-
-    			if (dirty & /*options*/ 2 && label_for_value !== (label_for_value = /*option*/ ctx[20].id)) {
-    				attr_dev(label, "for", label_for_value);
-    			}
-    		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(label);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1$3.name,
-    		type: "if",
-    		source: "(61:4) {#if option.title}",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    // (39:2) {#each options as option}
-    function create_each_block$2(ctx) {
-    	let t;
-    	let if_block1_anchor;
-
-    	function select_block_type(ctx, dirty) {
-    		if (/*multiple*/ ctx[2]) return create_if_block_2$1;
-    		return create_else_block$3;
-    	}
-
-    	let current_block_type = select_block_type(ctx);
-    	let if_block0 = current_block_type(ctx);
-    	let if_block1 = /*option*/ ctx[20].title && create_if_block_1$3(ctx);
-
-    	const block = {
-    		c: function create() {
-    			if_block0.c();
-    			t = space();
-    			if (if_block1) if_block1.c();
-    			if_block1_anchor = empty();
-    		},
-    		m: function mount(target, anchor) {
-    			if_block0.m(target, anchor);
     			insert_dev(target, t, anchor);
-    			if (if_block1) if_block1.m(target, anchor);
-    			insert_dev(target, if_block1_anchor, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (current_block_type === (current_block_type = select_block_type(ctx)) && if_block0) {
-    				if_block0.p(ctx, dirty);
-    			} else {
-    				if_block0.d(1);
-    				if_block0 = current_block_type(ctx);
-
-    				if (if_block0) {
-    					if_block0.c();
-    					if_block0.m(t.parentNode, t);
-    				}
-    			}
-
-    			if (/*option*/ ctx[20].title) {
-    				if (if_block1) {
-    					if_block1.p(ctx, dirty);
-    				} else {
-    					if_block1 = create_if_block_1$3(ctx);
-    					if_block1.c();
-    					if_block1.m(if_block1_anchor.parentNode, if_block1_anchor);
-    				}
-    			} else if (if_block1) {
-    				if_block1.d(1);
-    				if_block1 = null;
-    			}
+    			if (dirty & /*errores*/ 4 && t_value !== (t_value = /*errores*/ ctx[2].denominacion + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
-    			if_block0.d(detaching);
     			if (detaching) detach_dev(t);
-    			if (if_block1) if_block1.d(detaching);
-    			if (detaching) detach_dev(if_block1_anchor);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block$2.name,
-    		type: "each",
-    		source: "(39:2) {#each options as option}",
+    		id: create_if_block_3.name,
+    		type: "if",
+    		source: "(91:16) {#if errores.denominacion}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (65:2) {#if get($touched, name) && get($errors, name)}
-    function create_if_block$5(ctx) {
-    	let div;
-    	let t_value = get(/*$errors*/ ctx[4], /*name*/ ctx[0]) + "";
+    // (101:16) {#if errores.latitud}
+    function create_if_block_2(ctx) {
+    	let t_value = /*errores*/ ctx[2].latitud + "";
     	let t;
 
     	const block = {
     		c: function create() {
-    			div = element("div");
     			t = text(t_value);
-    			attr_dev(div, "class", "message");
-    			add_location(div, file$e, 65, 4, 1501);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, t);
+    			insert_dev(target, t, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*$errors, name*/ 17 && t_value !== (t_value = get(/*$errors*/ ctx[4], /*name*/ ctx[0]) + "")) set_data_dev(t, t_value);
+    			if (dirty & /*errores*/ 4 && t_value !== (t_value = /*errores*/ ctx[2].latitud + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
+    			if (detaching) detach_dev(t);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$5.name,
+    		id: create_if_block_2.name,
     		type: "if",
-    		source: "(65:2) {#if get($touched, name) && get($errors, name)}",
+    		source: "(101:16) {#if errores.latitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$h(ctx) {
-    	let div;
+    // (111:16) {#if errores.longitud}
+    function create_if_block_1$1(ctx) {
+    	let t_value = /*errores*/ ctx[2].longitud + "";
     	let t;
-    	let show_if = get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]);
-    	let each_value = /*options*/ ctx[1];
-    	validate_each_argument(each_value);
-    	let each_blocks = [];
-
-    	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block$2(get_each_context$2(ctx, each_value, i));
-    	}
-
-    	let if_block = show_if && create_if_block$5(ctx);
 
     	const block = {
     		c: function create() {
-    			div = element("div");
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].c();
-    			}
-
-    			t = space();
-    			if (if_block) if_block.c();
-    			attr_dev(div, "class", "field");
-    			toggle_class(div, "error", get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]));
-    			add_location(div, file$e, 37, 0, 768);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    			t = text(t_value);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-
-    			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].m(div, null);
-    			}
-
-    			append_dev(div, t);
-    			if (if_block) if_block.m(div, null);
-    		},
-    		p: function update(ctx, [dirty]) {
-    			if (dirty & /*options, name, $$restProps, $choice, onChange, onBlur, multiple*/ 7207) {
-    				each_value = /*options*/ ctx[1];
-    				validate_each_argument(each_value);
-    				let i;
-
-    				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context$2(ctx, each_value, i);
-
-    					if (each_blocks[i]) {
-    						each_blocks[i].p(child_ctx, dirty);
-    					} else {
-    						each_blocks[i] = create_each_block$2(child_ctx);
-    						each_blocks[i].c();
-    						each_blocks[i].m(div, t);
-    					}
-    				}
-
-    				for (; i < each_blocks.length; i += 1) {
-    					each_blocks[i].d(1);
-    				}
-
-    				each_blocks.length = each_value.length;
-    			}
-
-    			if (dirty & /*$touched, name, $errors*/ 25) show_if = get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]);
-
-    			if (show_if) {
-    				if (if_block) {
-    					if_block.p(ctx, dirty);
-    				} else {
-    					if_block = create_if_block$5(ctx);
-    					if_block.c();
-    					if_block.m(div, null);
-    				}
-    			} else if (if_block) {
-    				if_block.d(1);
-    				if_block = null;
-    			}
-
-    			if (dirty & /*get, $touched, name, $errors*/ 25) {
-    				toggle_class(div, "error", get(/*$touched*/ ctx[3], /*name*/ ctx[0]) && get(/*$errors*/ ctx[4], /*name*/ ctx[0]));
-    			}
-    		},
-    		i: noop,
-    		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    			destroy_each(each_blocks, detaching);
-    			if (if_block) if_block.d();
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$h.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$h($$self, $$props, $$invalidate) {
-    	const omit_props_names = ["name","options","multiple","value"];
-    	let $$restProps = compute_rest_props($$props, omit_props_names);
-    	let $values;
-    	let $touched;
-    	let $errors;
-    	let $choice;
-    	let { name } = $$props;
-    	let { options } = $$props;
-    	let { multiple = false } = $$props;
-    	let { value = "" } = $$props;
-    	const { touchField, values, errors, touched, validateOnChange } = getContext(FORM);
-    	validate_store(values, "values");
-    	component_subscribe($$self, values, value => $$invalidate(17, $values = value));
-    	validate_store(errors, "errors");
-    	component_subscribe($$self, errors, value => $$invalidate(4, $errors = value));
-    	validate_store(touched, "touched");
-    	component_subscribe($$self, touched, value => $$invalidate(3, $touched = value));
-    	const choice = writableDerived(values, $values => get($values, name, multiple ? [] : ""), newValue => set($values, name, newValue));
-    	validate_store(choice, "choice");
-    	component_subscribe($$self, choice, value => $$invalidate(5, $choice = value));
-
-    	function onChange() {
-    		touchField(name, validateOnChange);
-    	}
-
-    	function onBlur() {
-    		touchField(name);
-    	}
-
-    	if (value) {
-    		setTimeout(
-    			() => {
-    				choice.set(value);
-    			},
-    			0
-    		);
-    	}
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Choice", $$slots, []);
-    	const $$binding_groups = [[]];
-
-    	function input_change_handler() {
-    		$choice = get_binding_group_value($$binding_groups[0], this.__value, this.checked);
-    		choice.set($choice);
-    	}
-
-    	function input_change_handler_1() {
-    		$choice = this.__value;
-    		choice.set($choice);
-    	}
-
-    	$$self.$$set = $$new_props => {
-    		$$props = assign(assign({}, $$props), exclude_internal_props($$new_props));
-    		$$invalidate(12, $$restProps = compute_rest_props($$props, omit_props_names));
-    		if ("name" in $$new_props) $$invalidate(0, name = $$new_props.name);
-    		if ("options" in $$new_props) $$invalidate(1, options = $$new_props.options);
-    		if ("multiple" in $$new_props) $$invalidate(2, multiple = $$new_props.multiple);
-    		if ("value" in $$new_props) $$invalidate(13, value = $$new_props.value);
-    	};
-
-    	$$self.$capture_state = () => ({
-    		getContext,
-    		get,
-    		set,
-    		writableDerived,
-    		FORM,
-    		name,
-    		options,
-    		multiple,
-    		value,
-    		touchField,
-    		values,
-    		errors,
-    		touched,
-    		validateOnChange,
-    		choice,
-    		onChange,
-    		onBlur,
-    		$values,
-    		$touched,
-    		$errors,
-    		$choice
-    	});
-
-    	$$self.$inject_state = $$new_props => {
-    		if ("name" in $$props) $$invalidate(0, name = $$new_props.name);
-    		if ("options" in $$props) $$invalidate(1, options = $$new_props.options);
-    		if ("multiple" in $$props) $$invalidate(2, multiple = $$new_props.multiple);
-    		if ("value" in $$props) $$invalidate(13, value = $$new_props.value);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
-    	return [
-    		name,
-    		options,
-    		multiple,
-    		$touched,
-    		$errors,
-    		$choice,
-    		values,
-    		errors,
-    		touched,
-    		choice,
-    		onChange,
-    		onBlur,
-    		$$restProps,
-    		value,
-    		input_change_handler,
-    		$$binding_groups,
-    		input_change_handler_1
-    	];
-    }
-
-    class Choice extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-
-    		init(this, options, instance$h, create_fragment$h, safe_not_equal, {
-    			name: 0,
-    			options: 1,
-    			multiple: 2,
-    			value: 13
-    		});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Choice",
-    			options,
-    			id: create_fragment$h.name
-    		});
-
-    		const { ctx } = this.$$;
-    		const props = options.props || {};
-
-    		if (/*name*/ ctx[0] === undefined && !("name" in props)) {
-    			console.warn("<Choice> was created without expected prop 'name'");
-    		}
-
-    		if (/*options*/ ctx[1] === undefined && !("options" in props)) {
-    			console.warn("<Choice> was created without expected prop 'options'");
-    		}
-    	}
-
-    	get name() {
-    		throw new Error("<Choice>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set name(value) {
-    		throw new Error("<Choice>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get options() {
-    		throw new Error("<Choice>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set options(value) {
-    		throw new Error("<Choice>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get multiple() {
-    		throw new Error("<Choice>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set multiple(value) {
-    		throw new Error("<Choice>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	get value() {
-    		throw new Error("<Choice>: Props cannot be read directly from the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-
-    	set value(value) {
-    		throw new Error("<Choice>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    const BASE_URL$1 = "http://localhost:3001/api/v1/series/";
-
-
-    async function obtenerDatos(id) {
-        let respuesta = await fetch(`${BASE_URL$1}/${id}`, {
-            method: 'GET',
-        });
-
-        if (respuesta.status !== 200) {
-            throw new Error(`Estado HTTP ${respuesta.status}`);
-        }
-        return respuesta;
-    }
-
-    const seriesServicio = { obtenerDatos };
-
-    /* src/componentes/Dispositivo.svelte generated by Svelte v3.24.1 */
-
-    const { console: console_1 } = globals;
-    const file$f = "src/componentes/Dispositivo.svelte";
-
-    // (81:4) {#if dispositivo}
-    function create_if_block$6(ctx) {
-    	let p0;
-    	let t0_value = /*dispositivo*/ ctx[0].id + "";
-    	let t0;
-    	let t1;
-    	let form;
-    	let t2;
-    	let p1;
-    	let t3_value = /*dispositivo*/ ctx[0].denominacion + "";
-    	let t3;
-    	let t4;
-    	let a0;
-    	let button0;
-    	let t5;
-    	let a1;
-    	let button1;
-    	let current;
-
-    	form = new Form({
-    			props: {
-    				schema: /*schema*/ ctx[1],
-    				validateOnChange: true,
-    				validateOnBlur: true,
-    				i: true,
-    				$$slots: {
-    					default: [
-    						create_default_slot_4$1,
-    						({ isSubmitting }) => ({ 6: isSubmitting }),
-    						({ isSubmitting }) => isSubmitting ? 64 : 0
-    					]
-    				},
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
-
-    	form.$on("submit", guardar);
-    	form.$on("reset", resetear);
-
-    	button0 = new Button_1({
-    			props: {
-    				variant: "outlined",
-    				$$slots: { default: [create_default_slot_2$1] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
-
-    	button1 = new Button_1({
-    			props: {
-    				variant: "outlined",
-    				$$slots: { default: [create_default_slot$2] },
-    				$$scope: { ctx }
-    			},
-    			$$inline: true
-    		});
-
-    	const block = {
-    		c: function create() {
-    			p0 = element("p");
-    			t0 = text(t0_value);
-    			t1 = space();
-    			create_component(form.$$.fragment);
-    			t2 = space();
-    			p1 = element("p");
-    			t3 = text(t3_value);
-    			t4 = space();
-    			a0 = element("a");
-    			create_component(button0.$$.fragment);
-    			t5 = space();
-    			a1 = element("a");
-    			create_component(button1.$$.fragment);
-    			add_location(p0, file$f, 81, 8, 2381);
-    			add_location(p1, file$f, 103, 8, 2900);
-    			attr_dev(a0, "href", "/");
-    			add_location(a0, file$f, 104, 8, 2942);
-    			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$f, 109, 8, 3074);
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, p0, anchor);
-    			append_dev(p0, t0);
-    			insert_dev(target, t1, anchor);
-    			mount_component(form, target, anchor);
-    			insert_dev(target, t2, anchor);
-    			insert_dev(target, p1, anchor);
-    			append_dev(p1, t3);
-    			insert_dev(target, t4, anchor);
-    			insert_dev(target, a0, anchor);
-    			mount_component(button0, a0, null);
-    			insert_dev(target, t5, anchor);
-    			insert_dev(target, a1, anchor);
-    			mount_component(button1, a1, null);
-    			current = true;
+    			insert_dev(target, t, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if ((!current || dirty & /*dispositivo*/ 1) && t0_value !== (t0_value = /*dispositivo*/ ctx[0].id + "")) set_data_dev(t0, t0_value);
-    			const form_changes = {};
-
-    			if (dirty & /*$$scope*/ 128) {
-    				form_changes.$$scope = { dirty, ctx };
-    			}
-
-    			form.$set(form_changes);
-    			if ((!current || dirty & /*dispositivo*/ 1) && t3_value !== (t3_value = /*dispositivo*/ ctx[0].denominacion + "")) set_data_dev(t3, t3_value);
-    			const button0_changes = {};
-
-    			if (dirty & /*$$scope*/ 128) {
-    				button0_changes.$$scope = { dirty, ctx };
-    			}
-
-    			button0.$set(button0_changes);
-    			const button1_changes = {};
-
-    			if (dirty & /*$$scope*/ 128) {
-    				button1_changes.$$scope = { dirty, ctx };
-    			}
-
-    			button1.$set(button1_changes);
-    		},
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(form.$$.fragment, local);
-    			transition_in(button0.$$.fragment, local);
-    			transition_in(button1.$$.fragment, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(form.$$.fragment, local);
-    			transition_out(button0.$$.fragment, local);
-    			transition_out(button1.$$.fragment, local);
-    			current = false;
+    			if (dirty & /*errores*/ 4 && t_value !== (t_value = /*errores*/ ctx[2].longitud + "")) set_data_dev(t, t_value);
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(p0);
-    			if (detaching) detach_dev(t1);
-    			destroy_component(form, detaching);
-    			if (detaching) detach_dev(t2);
-    			if (detaching) detach_dev(p1);
-    			if (detaching) detach_dev(t4);
-    			if (detaching) detach_dev(a0);
-    			destroy_component(button0);
-    			if (detaching) detach_dev(t5);
-    			if (detaching) detach_dev(a1);
-    			destroy_component(button1);
+    			if (detaching) detach_dev(t);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$6.name,
+    		id: create_if_block_1$1.name,
     		type: "if",
-    		source: "(81:4) {#if dispositivo}",
+    		source: "(111:16) {#if errores.longitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (83:8) <Form             {schema}             validateOnChange={true}             validateOnBlur={true}             on:submit={guardar}             on:reset={resetear}      i       let:isSubmitting>
+    // (113:12) <Button variant="outlined" type="submit">
     function create_default_slot_4$1(ctx) {
-    	let input0;
-    	let t0;
-    	let input1;
-    	let t1;
-    	let input2;
-    	let current;
-
-    	input0 = new Input({
-    			props: {
-    				name: "denominacion",
-    				label: "Denominación"
-    			},
-    			$$inline: true
-    		});
-
-    	input1 = new Input({
-    			props: { name: "longitud", label: "Longitud" },
-    			$$inline: true
-    		});
-
-    	input2 = new Input({
-    			props: { name: "latitud", label: "Latitud" },
-    			$$inline: true
-    		});
+    	let t;
 
     	const block = {
     		c: function create() {
-    			create_component(input0.$$.fragment);
-    			t0 = space();
-    			create_component(input1.$$.fragment);
-    			t1 = space();
-    			create_component(input2.$$.fragment);
+    			t = text("Guardar");
     		},
     		m: function mount(target, anchor) {
-    			mount_component(input0, target, anchor);
-    			insert_dev(target, t0, anchor);
-    			mount_component(input1, target, anchor);
-    			insert_dev(target, t1, anchor);
-    			mount_component(input2, target, anchor);
-    			current = true;
-    		},
-    		p: noop,
-    		i: function intro(local) {
-    			if (current) return;
-    			transition_in(input0.$$.fragment, local);
-    			transition_in(input1.$$.fragment, local);
-    			transition_in(input2.$$.fragment, local);
-    			current = true;
-    		},
-    		o: function outro(local) {
-    			transition_out(input0.$$.fragment, local);
-    			transition_out(input1.$$.fragment, local);
-    			transition_out(input2.$$.fragment, local);
-    			current = false;
+    			insert_dev(target, t, anchor);
     		},
     		d: function destroy(detaching) {
-    			destroy_component(input0, detaching);
-    			if (detaching) detach_dev(t0);
-    			destroy_component(input1, detaching);
-    			if (detaching) detach_dev(t1);
-    			destroy_component(input2, detaching);
+    			if (detaching) detach_dev(t);
     		}
     	};
 
@@ -12410,14 +16482,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_4$1.name,
     		type: "slot",
-    		source: "(83:8) <Form             {schema}             validateOnChange={true}             validateOnBlur={true}             on:submit={guardar}             on:reset={resetear}      i       let:isSubmitting>",
+    		source: "(113:12) <Button variant=\\\"outlined\\\" type=\\\"submit\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (107:16) <Label>
+    // (120:12) <Label>
     function create_default_slot_3$1(ctx) {
     	let t;
 
@@ -12437,14 +16509,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$1.name,
     		type: "slot",
-    		source: "(107:16) <Label>",
+    		source: "(120:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (106:12) <Button variant="outlined">
+    // (119:8) <Button variant="outlined">
     function create_default_slot_2$1(ctx) {
     	let label;
     	let current;
@@ -12468,7 +16540,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 128) {
+    			if (dirty & /*$$scope*/ 2048) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -12492,14 +16564,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$1.name,
     		type: "slot",
-    		source: "(106:12) <Button variant=\\\"outlined\\\">",
+    		source: "(119:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (112:16) <Label>
+    // (125:12) <Label>
     function create_default_slot_1$1(ctx) {
     	let t;
 
@@ -12519,14 +16591,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$1.name,
     		type: "slot",
-    		source: "(112:16) <Label>",
+    		source: "(125:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (111:12) <Button variant="outlined">
+    // (124:8) <Button variant="outlined">
     function create_default_slot$2(ctx) {
     	let label;
     	let current;
@@ -12550,7 +16622,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 128) {
+    			if (dirty & /*$$scope*/ 2048) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -12574,19 +16646,45 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$2.name,
     		type: "slot",
-    		source: "(111:12) <Button variant=\\\"outlined\\\">",
+    		source: "(124:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$i(ctx) {
+    function create_fragment$e(ctx) {
     	let main;
     	let h2;
     	let t1;
+    	let t2;
+    	let hr;
+    	let t3;
+    	let a0;
+    	let button0;
+    	let t4;
+    	let a1;
+    	let button1;
     	let current;
-    	let if_block = /*dispositivo*/ ctx[0] && create_if_block$6(ctx);
+    	let if_block = /*dispositivo*/ ctx[0] && create_if_block$3(ctx);
+
+    	button0 = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				$$slots: { default: [create_default_slot_2$1] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	button1 = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				$$slots: { default: [create_default_slot$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
 
     	const block = {
     		c: function create() {
@@ -12595,9 +16693,22 @@ var app = (function (L) {
     			h2.textContent = "Dispositivo";
     			t1 = space();
     			if (if_block) if_block.c();
+    			t2 = space();
+    			hr = element("hr");
+    			t3 = space();
+    			a0 = element("a");
+    			create_component(button0.$$.fragment);
+    			t4 = space();
+    			a1 = element("a");
+    			create_component(button1.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$f, 79, 4, 2330);
-    			add_location(main, file$f, 78, 0, 2319);
+    			add_location(h2, file$b, 77, 4, 2396);
+    			add_location(hr, file$b, 116, 4, 3824);
+    			attr_dev(a0, "href", "/");
+    			add_location(a0, file$b, 117, 4, 3834);
+    			attr_dev(a1, "href", "/dispositivos");
+    			add_location(a1, file$b, 122, 4, 3946);
+    			add_location(main, file$b, 75, 0, 2380);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -12607,6 +16718,14 @@ var app = (function (L) {
     			append_dev(main, h2);
     			append_dev(main, t1);
     			if (if_block) if_block.m(main, null);
+    			append_dev(main, t2);
+    			append_dev(main, hr);
+    			append_dev(main, t3);
+    			append_dev(main, a0);
+    			mount_component(button0, a0, null);
+    			append_dev(main, t4);
+    			append_dev(main, a1);
+    			mount_component(button1, a1, null);
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
@@ -12618,10 +16737,10 @@ var app = (function (L) {
     						transition_in(if_block, 1);
     					}
     				} else {
-    					if_block = create_if_block$6(ctx);
+    					if_block = create_if_block$3(ctx);
     					if_block.c();
     					transition_in(if_block, 1);
-    					if_block.m(main, null);
+    					if_block.m(main, t2);
     				}
     			} else if (if_block) {
     				group_outros();
@@ -12632,25 +16751,46 @@ var app = (function (L) {
 
     				check_outros();
     			}
+
+    			const button0_changes = {};
+
+    			if (dirty & /*$$scope*/ 2048) {
+    				button0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button0.$set(button0_changes);
+    			const button1_changes = {};
+
+    			if (dirty & /*$$scope*/ 2048) {
+    				button1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button1.$set(button1_changes);
     		},
     		i: function intro(local) {
     			if (current) return;
     			transition_in(if_block);
+    			transition_in(button0.$$.fragment, local);
+    			transition_in(button1.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
     			transition_out(if_block);
+    			transition_out(button0.$$.fragment, local);
+    			transition_out(button1.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
     			if (if_block) if_block.d();
+    			destroy_component(button0);
+    			destroy_component(button1);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$i.name,
+    		id: create_fragment$e.name,
     		type: "component",
     		source: "",
     		ctx
@@ -12659,22 +16799,9 @@ var app = (function (L) {
     	return block;
     }
 
-    function resetear() {
-    	console.log("form has been reset");
-    }
-
-    function guardar({ detail: { values, setSubmitting, resetForm } }) {
-    	setTimeout(
-    		() => {
-    			formValues = values;
-    			setSubmitting(false);
-    			resetForm();
-    		},
-    		1000
-    	);
-    }
-
-    function instance$i($$self, $$props, $$invalidate) {
+    function instance$e($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Dispositivo", slots, []);
     	let { id } = $$props;
 
     	// datos obtenidos del backend
@@ -12684,10 +16811,15 @@ var app = (function (L) {
     	let seriesTemperatura;
 
     	// datos formulario
-    	let valoresFormulario;
+    	let valores = {};
+
+    	let errores = {};
 
     	onMount(async () => {
     		await dispositivosServicio.obtenerDispositivo(id).then(respuesta => respuesta.json()).then(resultado => $$invalidate(0, dispositivo = resultado));
+    		$$invalidate(1, valores.denominacion = dispositivo.denominacion, valores);
+    		$$invalidate(1, valores.latitud = dispositivo.ubicacion.coordinates[1], valores);
+    		$$invalidate(1, valores.longitud = dispositivo.ubicacion.coordinates[0], valores);
     		await seriesServicio.obtenerDatos(id + "-Humedad").then(respuesta => respuesta.json()).then(resultado => seriesHumedad = resultado);
     		await seriesServicio.obtenerDatos(id + "-Temperatura").then(respuesta => respuesta.json()).then(respuesta => seriesTemperatura = respuesta);
     		console.log(seriesHumedad);
@@ -12699,11 +16831,21 @@ var app = (function (L) {
     		}
     	});
 
-    	const schema = yup.object().shape({
-    		denominacion: yup.string().required("Debe especificar la denominacion del dispositivo"),
-    		latitud: yup.number().required("Debe especificar la ubicacion (latitud) del dispositivo"),
-    		longitud: yup.number().required("Debe especificar la ubicacion (longitud) del dispositivo")
-    	});
+    	const capturarErrores = ({ inner }) => {
+    		return inner.reduce(
+    			(acc, err) => {
+    				return { ...acc, [err.path]: err.message };
+    			},
+    			{}
+    		);
+    	};
+
+    	const guardar = () => {
+    		dispositivoEsquema.validate(valores, { abortEarly: false }).then(() => {
+    			alert(JSON.stringify(valores, null, 2));
+    			dispositivosServicio.modificarDispositivo(dispositivo.id, valores);
+    		}).catch(err => $$invalidate(2, errores = capturarErrores(err)));
+    	};
 
     	const writable_props = ["id"];
 
@@ -12711,11 +16853,23 @@ var app = (function (L) {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<Dispositivo> was created with unknown prop '${key}'`);
     	});
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Dispositivo", $$slots, []);
+    	function input0_input_handler() {
+    		valores.denominacion = this.value;
+    		$$invalidate(1, valores);
+    	}
+
+    	function input1_input_handler() {
+    		valores.latitud = this.value;
+    		$$invalidate(1, valores);
+    	}
+
+    	function input2_input_handler() {
+    		valores.longitud = this.value;
+    		$$invalidate(1, valores);
+    	}
 
     	$$self.$$set = $$props => {
-    		if ("id" in $$props) $$invalidate(2, id = $$props.id);
+    		if ("id" in $$props) $$invalidate(4, id = $$props.id);
     	};
 
     	$$self.$capture_state = () => ({
@@ -12723,53 +16877,60 @@ var app = (function (L) {
     		Button: Button_1,
     		Label,
     		Icon,
-    		Form,
-    		Input,
-    		Select,
-    		Choice,
     		dispositivosServicio,
     		seriesServicio,
+    		dispositivoEsquema,
     		id,
     		dispositivo,
     		seriesHumedad,
     		seriesTemperatura,
-    		valoresFormulario,
-    		resetear,
-    		guardar,
-    		schema
+    		valores,
+    		errores,
+    		capturarErrores,
+    		guardar
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ("id" in $$props) $$invalidate(2, id = $$props.id);
+    		if ("id" in $$props) $$invalidate(4, id = $$props.id);
     		if ("dispositivo" in $$props) $$invalidate(0, dispositivo = $$props.dispositivo);
     		if ("seriesHumedad" in $$props) seriesHumedad = $$props.seriesHumedad;
     		if ("seriesTemperatura" in $$props) seriesTemperatura = $$props.seriesTemperatura;
-    		if ("valoresFormulario" in $$props) valoresFormulario = $$props.valoresFormulario;
+    		if ("valores" in $$props) $$invalidate(1, valores = $$props.valores);
+    		if ("errores" in $$props) $$invalidate(2, errores = $$props.errores);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [dispositivo, schema, id];
+    	return [
+    		dispositivo,
+    		valores,
+    		errores,
+    		guardar,
+    		id,
+    		input0_input_handler,
+    		input1_input_handler,
+    		input2_input_handler
+    	];
     }
 
     class Dispositivo extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$i, create_fragment$i, safe_not_equal, { id: 2 });
+    		init(this, options, instance$e, create_fragment$e, safe_not_equal, { id: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Dispositivo",
     			options,
-    			id: create_fragment$i.name
+    			id: create_fragment$e.name
     		});
 
     		const { ctx } = this.$$;
     		const props = options.props || {};
 
-    		if (/*id*/ ctx[2] === undefined && !("id" in props)) {
+    		if (/*id*/ ctx[4] === undefined && !("id" in props)) {
     			console_1.warn("<Dispositivo> was created without expected prop 'id'");
     		}
     	}
@@ -12783,21 +16944,715 @@ var app = (function (L) {
     	}
     }
 
+    /* src/componentes/NuevoDispositivo.svelte generated by Svelte v3.29.0 */
+    const file$c = "src/componentes/NuevoDispositivo.svelte";
+
+    // (60:12) {#if errores.denominacion}
+    function create_if_block_2$1(ctx) {
+    	let t_value = /*errores*/ ctx[1].denominacion + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*errores*/ 2 && t_value !== (t_value = /*errores*/ ctx[1].denominacion + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_2$1.name,
+    		type: "if",
+    		source: "(60:12) {#if errores.denominacion}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (70:12) {#if errores.latitud}
+    function create_if_block_1$2(ctx) {
+    	let t_value = /*errores*/ ctx[1].latitud + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*errores*/ 2 && t_value !== (t_value = /*errores*/ ctx[1].latitud + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block_1$2.name,
+    		type: "if",
+    		source: "(70:12) {#if errores.latitud}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (80:12) {#if errores.longitud}
+    function create_if_block$4(ctx) {
+    	let t_value = /*errores*/ ctx[1].longitud + "";
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text(t_value);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		p: function update(ctx, dirty) {
+    			if (dirty & /*errores*/ 2 && t_value !== (t_value = /*errores*/ ctx[1].longitud + "")) set_data_dev(t, t_value);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_if_block$4.name,
+    		type: "if",
+    		source: "(80:12) {#if errores.longitud}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (82:8) <Button variant="outlined" type="submit">
+    function create_default_slot_4$2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Guardar");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_4$2.name,
+    		type: "slot",
+    		source: "(82:8) <Button variant=\\\"outlined\\\" type=\\\"submit\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (88:12) <Label>
+    function create_default_slot_3$2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Mapa");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_3$2.name,
+    		type: "slot",
+    		source: "(88:12) <Label>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (87:8) <Button variant="outlined">
+    function create_default_slot_2$2(ctx) {
+    	let label;
+    	let current;
+
+    	label = new Label({
+    			props: {
+    				$$slots: { default: [create_default_slot_3$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(label.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(label, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const label_changes = {};
+
+    			if (dirty & /*$$scope*/ 256) {
+    				label_changes.$$scope = { dirty, ctx };
+    			}
+
+    			label.$set(label_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(label.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(label.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(label, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_2$2.name,
+    		type: "slot",
+    		source: "(87:8) <Button variant=\\\"outlined\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (93:12) <Label>
+    function create_default_slot_1$2(ctx) {
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			t = text("Listado");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, t, anchor);
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(t);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot_1$2.name,
+    		type: "slot",
+    		source: "(93:12) <Label>",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (92:8) <Button variant="outlined">
+    function create_default_slot$3(ctx) {
+    	let label;
+    	let current;
+
+    	label = new Label({
+    			props: {
+    				$$slots: { default: [create_default_slot_1$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			create_component(label.$$.fragment);
+    		},
+    		m: function mount(target, anchor) {
+    			mount_component(label, target, anchor);
+    			current = true;
+    		},
+    		p: function update(ctx, dirty) {
+    			const label_changes = {};
+
+    			if (dirty & /*$$scope*/ 256) {
+    				label_changes.$$scope = { dirty, ctx };
+    			}
+
+    			label.$set(label_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(label.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(label.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			destroy_component(label, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_default_slot$3.name,
+    		type: "slot",
+    		source: "(92:8) <Button variant=\\\"outlined\\\">",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function create_fragment$f(ctx) {
+    	let main;
+    	let h2;
+    	let t1;
+    	let form;
+    	let label0;
+    	let t3;
+    	let div0;
+    	let input0;
+    	let t4;
+    	let t5;
+    	let label1;
+    	let t7;
+    	let div1;
+    	let input1;
+    	let t8;
+    	let t9;
+    	let label2;
+    	let t11;
+    	let div2;
+    	let input2;
+    	let t12;
+    	let t13;
+    	let button0;
+    	let t14;
+    	let hr;
+    	let t15;
+    	let a0;
+    	let button1;
+    	let t16;
+    	let a1;
+    	let button2;
+    	let current;
+    	let mounted;
+    	let dispose;
+    	let if_block0 = /*errores*/ ctx[1].denominacion && create_if_block_2$1(ctx);
+    	let if_block1 = /*errores*/ ctx[1].latitud && create_if_block_1$2(ctx);
+    	let if_block2 = /*errores*/ ctx[1].longitud && create_if_block$4(ctx);
+
+    	button0 = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				type: "submit",
+    				$$slots: { default: [create_default_slot_4$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	button1 = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				$$slots: { default: [create_default_slot_2$2] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	button2 = new Button_1({
+    			props: {
+    				variant: "outlined",
+    				$$slots: { default: [create_default_slot$3] },
+    				$$scope: { ctx }
+    			},
+    			$$inline: true
+    		});
+
+    	const block = {
+    		c: function create() {
+    			main = element("main");
+    			h2 = element("h2");
+    			h2.textContent = "Dispositivo Nuevo";
+    			t1 = space();
+    			form = element("form");
+    			label0 = element("label");
+    			label0.textContent = "Denominación";
+    			t3 = space();
+    			div0 = element("div");
+    			input0 = element("input");
+    			t4 = space();
+    			if (if_block0) if_block0.c();
+    			t5 = space();
+    			label1 = element("label");
+    			label1.textContent = "Latitud";
+    			t7 = space();
+    			div1 = element("div");
+    			input1 = element("input");
+    			t8 = space();
+    			if (if_block1) if_block1.c();
+    			t9 = space();
+    			label2 = element("label");
+    			label2.textContent = "Longitud";
+    			t11 = space();
+    			div2 = element("div");
+    			input2 = element("input");
+    			t12 = space();
+    			if (if_block2) if_block2.c();
+    			t13 = space();
+    			create_component(button0.$$.fragment);
+    			t14 = space();
+    			hr = element("hr");
+    			t15 = space();
+    			a0 = element("a");
+    			create_component(button1.$$.fragment);
+    			t16 = space();
+    			a1 = element("a");
+    			create_component(button2.$$.fragment);
+    			attr_dev(h2, "class", "svelte-f9adgw");
+    			add_location(h2, file$c, 48, 4, 1259);
+    			attr_dev(label0, "for", "denominacion");
+    			add_location(label0, file$c, 51, 8, 1341);
+    			attr_dev(input0, "id", "denominacion");
+    			attr_dev(input0, "name", "denominacion");
+    			attr_dev(input0, "type", "text");
+    			attr_dev(input0, "placeholder", "denominación del dispositivo");
+    			add_location(input0, file$c, 53, 12, 1414);
+    			add_location(div0, file$c, 52, 8, 1396);
+    			attr_dev(label1, "for", "latitud");
+    			add_location(label1, file$c, 61, 8, 1720);
+    			attr_dev(input1, "id", "latitud");
+    			attr_dev(input1, "name", "latitud");
+    			attr_dev(input1, "type", "text");
+    			attr_dev(input1, "placeholder", "latitud del dispositivo");
+    			add_location(input1, file$c, 63, 12, 1783);
+    			add_location(div1, file$c, 62, 8, 1765);
+    			attr_dev(label2, "for", "longitud");
+    			add_location(label2, file$c, 71, 8, 2059);
+    			attr_dev(input2, "id", "longitud");
+    			attr_dev(input2, "name", "longitud");
+    			attr_dev(input2, "type", "text");
+    			attr_dev(input2, "placeholder", "longitud del dispositivo");
+    			add_location(input2, file$c, 73, 12, 2124);
+    			add_location(div2, file$c, 72, 8, 2106);
+    			add_location(form, file$c, 50, 4, 1291);
+    			add_location(hr, file$c, 84, 4, 2481);
+    			attr_dev(a0, "href", "/");
+    			add_location(a0, file$c, 85, 4, 2492);
+    			attr_dev(a1, "href", "/dispositivos");
+    			add_location(a1, file$c, 90, 4, 2604);
+    			add_location(main, file$c, 47, 0, 1248);
+    		},
+    		l: function claim(nodes) {
+    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, main, anchor);
+    			append_dev(main, h2);
+    			append_dev(main, t1);
+    			append_dev(main, form);
+    			append_dev(form, label0);
+    			append_dev(form, t3);
+    			append_dev(form, div0);
+    			append_dev(div0, input0);
+    			set_input_value(input0, /*valores*/ ctx[0].denominacion);
+    			append_dev(div0, t4);
+    			if (if_block0) if_block0.m(div0, null);
+    			append_dev(form, t5);
+    			append_dev(form, label1);
+    			append_dev(form, t7);
+    			append_dev(form, div1);
+    			append_dev(div1, input1);
+    			set_input_value(input1, /*valores*/ ctx[0].latitud);
+    			append_dev(div1, t8);
+    			if (if_block1) if_block1.m(div1, null);
+    			append_dev(form, t9);
+    			append_dev(form, label2);
+    			append_dev(form, t11);
+    			append_dev(form, div2);
+    			append_dev(div2, input2);
+    			set_input_value(input2, /*valores*/ ctx[0].longitud);
+    			append_dev(div2, t12);
+    			if (if_block2) if_block2.m(div2, null);
+    			append_dev(form, t13);
+    			mount_component(button0, form, null);
+    			append_dev(main, t14);
+    			append_dev(main, hr);
+    			append_dev(main, t15);
+    			append_dev(main, a0);
+    			mount_component(button1, a0, null);
+    			append_dev(main, t16);
+    			append_dev(main, a1);
+    			mount_component(button2, a1, null);
+    			current = true;
+
+    			if (!mounted) {
+    				dispose = [
+    					listen_dev(input0, "input", /*input0_input_handler*/ ctx[3]),
+    					listen_dev(input1, "input", /*input1_input_handler*/ ctx[4]),
+    					listen_dev(input2, "input", /*input2_input_handler*/ ctx[5]),
+    					listen_dev(form, "submit", prevent_default(/*guardar*/ ctx[2]), false, true, false)
+    				];
+
+    				mounted = true;
+    			}
+    		},
+    		p: function update(ctx, [dirty]) {
+    			if (dirty & /*valores*/ 1 && input0.value !== /*valores*/ ctx[0].denominacion) {
+    				set_input_value(input0, /*valores*/ ctx[0].denominacion);
+    			}
+
+    			if (/*errores*/ ctx[1].denominacion) {
+    				if (if_block0) {
+    					if_block0.p(ctx, dirty);
+    				} else {
+    					if_block0 = create_if_block_2$1(ctx);
+    					if_block0.c();
+    					if_block0.m(div0, null);
+    				}
+    			} else if (if_block0) {
+    				if_block0.d(1);
+    				if_block0 = null;
+    			}
+
+    			if (dirty & /*valores*/ 1 && input1.value !== /*valores*/ ctx[0].latitud) {
+    				set_input_value(input1, /*valores*/ ctx[0].latitud);
+    			}
+
+    			if (/*errores*/ ctx[1].latitud) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block_1$2(ctx);
+    					if_block1.c();
+    					if_block1.m(div1, null);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
+    			if (dirty & /*valores*/ 1 && input2.value !== /*valores*/ ctx[0].longitud) {
+    				set_input_value(input2, /*valores*/ ctx[0].longitud);
+    			}
+
+    			if (/*errores*/ ctx[1].longitud) {
+    				if (if_block2) {
+    					if_block2.p(ctx, dirty);
+    				} else {
+    					if_block2 = create_if_block$4(ctx);
+    					if_block2.c();
+    					if_block2.m(div2, null);
+    				}
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
+    			}
+
+    			const button0_changes = {};
+
+    			if (dirty & /*$$scope*/ 256) {
+    				button0_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button0.$set(button0_changes);
+    			const button1_changes = {};
+
+    			if (dirty & /*$$scope*/ 256) {
+    				button1_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button1.$set(button1_changes);
+    			const button2_changes = {};
+
+    			if (dirty & /*$$scope*/ 256) {
+    				button2_changes.$$scope = { dirty, ctx };
+    			}
+
+    			button2.$set(button2_changes);
+    		},
+    		i: function intro(local) {
+    			if (current) return;
+    			transition_in(button0.$$.fragment, local);
+    			transition_in(button1.$$.fragment, local);
+    			transition_in(button2.$$.fragment, local);
+    			current = true;
+    		},
+    		o: function outro(local) {
+    			transition_out(button0.$$.fragment, local);
+    			transition_out(button1.$$.fragment, local);
+    			transition_out(button2.$$.fragment, local);
+    			current = false;
+    		},
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(main);
+    			if (if_block0) if_block0.d();
+    			if (if_block1) if_block1.d();
+    			if (if_block2) if_block2.d();
+    			destroy_component(button0);
+    			destroy_component(button1);
+    			destroy_component(button2);
+    			mounted = false;
+    			run_all(dispose);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_fragment$f.name,
+    		type: "component",
+    		source: "",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    function instance$f($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("NuevoDispositivo", slots, []);
+    	let dispositivo;
+
+    	// datos formulario
+    	let valores = {};
+
+    	let errores = {};
+
+    	onMount(async () => {
+    		$$invalidate(0, valores.denominacion = "", valores);
+    		$$invalidate(0, valores.latitud = "", valores);
+    		$$invalidate(0, valores.longitud = "", valores);
+    	});
+
+    	const capturarErrores = ({ inner }) => {
+    		return inner.reduce(
+    			(acc, err) => {
+    				return { ...acc, [err.path]: err.message };
+    			},
+    			{}
+    		);
+    	};
+
+    	const guardar = () => {
+    		dispositivoEsquema.validate(valores, { abortEarly: false }).then(() => {
+    			alert(JSON.stringify(valores, null, 2));
+    			dispositivosServicio.agregarDispositivo(valores);
+    		}).catch(err => $$invalidate(1, errores = capturarErrores(err)));
+    	};
+
+    	const writable_props = [];
+
+    	Object.keys($$props).forEach(key => {
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<NuevoDispositivo> was created with unknown prop '${key}'`);
+    	});
+
+    	function input0_input_handler() {
+    		valores.denominacion = this.value;
+    		$$invalidate(0, valores);
+    	}
+
+    	function input1_input_handler() {
+    		valores.latitud = this.value;
+    		$$invalidate(0, valores);
+    	}
+
+    	function input2_input_handler() {
+    		valores.longitud = this.value;
+    		$$invalidate(0, valores);
+    	}
+
+    	$$self.$capture_state = () => ({
+    		onMount,
+    		Button: Button_1,
+    		Label,
+    		Icon,
+    		dispositivosServicio,
+    		dispositivoEsquema,
+    		dispositivo,
+    		valores,
+    		errores,
+    		capturarErrores,
+    		guardar
+    	});
+
+    	$$self.$inject_state = $$props => {
+    		if ("dispositivo" in $$props) dispositivo = $$props.dispositivo;
+    		if ("valores" in $$props) $$invalidate(0, valores = $$props.valores);
+    		if ("errores" in $$props) $$invalidate(1, errores = $$props.errores);
+    	};
+
+    	if ($$props && "$$inject" in $$props) {
+    		$$self.$inject_state($$props.$$inject);
+    	}
+
+    	return [
+    		valores,
+    		errores,
+    		guardar,
+    		input0_input_handler,
+    		input1_input_handler,
+    		input2_input_handler
+    	];
+    }
+
+    class NuevoDispositivo extends SvelteComponentDev {
+    	constructor(options) {
+    		super(options);
+    		init(this, options, instance$f, create_fragment$f, safe_not_equal, {});
+
+    		dispatch_dev("SvelteRegisterComponent", {
+    			component: this,
+    			tagName: "NuevoDispositivo",
+    			options,
+    			id: create_fragment$f.name
+    		});
+    	}
+    }
+
     var frappeCharts_min_cjs = createCommonjsModule(function (module, exports) {
     function styleInject(t,e){void 0===e&&(e={});var n=e.insertAt;if(t&&"undefined"!=typeof document){var i=document.head||document.getElementsByTagName("head")[0],a=document.createElement("style");a.type="text/css","top"===n&&i.firstChild?i.insertBefore(a,i.firstChild):i.appendChild(a),a.styleSheet?a.styleSheet.cssText=t:a.appendChild(document.createTextNode(t));}}function $(t,e){return "string"==typeof t?(e||document).querySelector(t):t||null}function getOffset(t){var e=t.getBoundingClientRect();return {top:e.top+(document.documentElement.scrollTop||document.body.scrollTop),left:e.left+(document.documentElement.scrollLeft||document.body.scrollLeft)}}function isHidden(t){return null===t.offsetParent}function isElementInViewport(t){var e=t.getBoundingClientRect();return e.top>=0&&e.left>=0&&e.bottom<=(window.innerHeight||document.documentElement.clientHeight)&&e.right<=(window.innerWidth||document.documentElement.clientWidth)}function getElementContentWidth(t){var e=window.getComputedStyle(t),n=parseFloat(e.paddingLeft)+parseFloat(e.paddingRight);return t.clientWidth-n}function fire(t,e,n){var i=document.createEvent("HTMLEvents");i.initEvent(e,!0,!0);for(var a in n)i[a]=n[a];return t.dispatchEvent(i)}function getTopOffset(t){return t.titleHeight+t.margins.top+t.paddings.top}function getLeftOffset(t){return t.margins.left+t.paddings.left}function getExtraHeight(t){return t.margins.top+t.margins.bottom+t.paddings.top+t.paddings.bottom+t.titleHeight+t.legendHeight}function getExtraWidth(t){return t.margins.left+t.margins.right+t.paddings.left+t.paddings.right}function _classCallCheck$4(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function floatTwo(t){return parseFloat(t.toFixed(2))}function fillArray(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]&&arguments[3];n||(n=i?t[0]:t[t.length-1]);var a=new Array(Math.abs(e)).fill(n);return t=i?a.concat(t):t.concat(a)}function getStringWidth(t,e){return (t+"").length*e}function getPositionByAngle(t,e){return {x:Math.sin(t*ANGLE_RATIO)*e,y:Math.cos(t*ANGLE_RATIO)*e}}function isValidNumber(t){var e=arguments.length>1&&void 0!==arguments[1]&&arguments[1];return !Number.isNaN(t)&&(void 0!==t&&(!!Number.isFinite(t)&&!(e&&t<0)))}function getBarHeightAndYAttr(t,e){var n=void 0,i=void 0;return t<=e?(n=e-t,i=t):(n=t-e,i=e),[n,i]}function equilizeNoOfElements(t,e){var n=arguments.length>2&&void 0!==arguments[2]?arguments[2]:e.length-t.length;return n>0?t=fillArray(t,n):e=fillArray(e,n),[t,e]}function truncateString(t,e){if(t)return t.length>e?t.slice(0,e-3)+"...":t}function shortenLargeNumber(t){var e=void 0;if("number"==typeof t)e=t;else if("string"==typeof t&&(e=Number(t),Number.isNaN(e)))return t;var n=Math.floor(Math.log10(Math.abs(e)));if(n<=2)return e;var i=Math.floor(n/3),a=Math.pow(10,n-3*i)*+(e/Math.pow(10,n)).toFixed(1);return Math.round(100*a)/100+" "+["","K","M","B","T"][i]}function getSplineCurvePointsStr(t,e){for(var n=[],i=0;i<t.length;i++)n.push([t[i],e[i]]);var a=function(t,e){var n=e[0]-t[0],i=e[1]-t[1];return {length:Math.sqrt(Math.pow(n,2)+Math.pow(i,2)),angle:Math.atan2(i,n)}},r=function(t,e,n,i){var r=a(e||t,n||t),s=r.angle+(i?Math.PI:0),o=.2*r.length;return [t[0]+Math.cos(s)*o,t[1]+Math.sin(s)*o]};return function(t,e){return t.reduce(function(t,n,i,a){return 0===i?n[0]+","+n[1]:t+" "+e(n,i,a)},"")}(n,function(t,e,n){var i=r(n[e-1],n[e-2],t),a=r(t,n[e-1],n[e+1],!0);return "C "+i[0]+","+i[1]+" "+a[0]+","+a[1]+" "+t[0]+","+t[1]})}function limitColor(t){return t>255?255:t<0?0:t}function lightenDarkenColor(t,e){var n=getColor(t),i=!1;"#"==n[0]&&(n=n.slice(1),i=!0);var a=parseInt(n,16),r=limitColor((a>>16)+e),s=limitColor((a>>8&255)+e),o=limitColor((255&a)+e);return (i?"#":"")+(o|s<<8|r<<16).toString(16)}function isValidColor(t){var e=/(^\s*)(rgb|hsl)(a?)[(]\s*([\d.]+\s*%?)\s*,\s*([\d.]+\s*%?)\s*,\s*([\d.]+\s*%?)\s*(?:,\s*([\d.]+)\s*)?[)]$/i;return /(^\s*)(#)((?:[A-Fa-f0-9]{3}){1,2})$/i.test(t)||e.test(t)}function $$1(t,e){return "string"==typeof t?(e||document).querySelector(t):t||null}function createSVG(t,e){var n=document.createElementNS("http://www.w3.org/2000/svg",t);for(var i in e){var a=e[i];if("inside"===i)$$1(a).appendChild(n);else if("around"===i){var r=$$1(a);r.parentNode.insertBefore(n,r),n.appendChild(r);}else "styles"===i?"object"===(void 0===a?"undefined":_typeof$1(a))&&Object.keys(a).map(function(t){n.style[t]=a[t];}):("className"===i&&(i="class"),"innerHTML"===i?n.textContent=a:n.setAttribute(i,a));}return n}function renderVerticalGradient(t,e){return createSVG("linearGradient",{inside:t,id:e,x1:0,x2:0,y1:0,y2:1})}function setGradientStop(t,e,n,i){return createSVG("stop",{inside:t,style:"stop-color: "+n,offset:e,"stop-opacity":i})}function makeSVGContainer(t,e,n,i){return createSVG("svg",{className:e,inside:t,width:n,height:i})}function makeSVGDefs(t){return createSVG("defs",{inside:t})}function makeSVGGroup(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:"",n=arguments.length>2&&void 0!==arguments[2]?arguments[2]:void 0,i={className:t,transform:e};return n&&(i.inside=n),createSVG("g",i)}function makePath(t){return createSVG("path",{className:arguments.length>1&&void 0!==arguments[1]?arguments[1]:"",d:t,styles:{stroke:arguments.length>2&&void 0!==arguments[2]?arguments[2]:"none",fill:arguments.length>3&&void 0!==arguments[3]?arguments[3]:"none","stroke-width":arguments.length>4&&void 0!==arguments[4]?arguments[4]:2}})}function makeArcPathStr(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:1,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=n.x+t.x,o=n.y+t.y,l=n.x+e.x,u=n.y+e.y;return "M"+n.x+" "+n.y+"\n\t\tL"+s+" "+o+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+u+" z"}function makeCircleStr(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:1,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=n.x+t.x,o=n.y+t.y,l=n.x+e.x,u=2*n.y,c=n.y+e.y;return "M"+n.x+" "+n.y+"\n\t\tL"+s+" "+o+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+u+" z\n\t\tL"+s+" "+u+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+c+" z"}function makeArcStrokePathStr(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:1,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=n.x+t.x,o=n.y+t.y,l=n.x+e.x,u=n.y+e.y;return "M"+s+" "+o+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+u}function makeStrokeCircleStr(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:1,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=n.x+t.x,o=n.y+t.y,l=n.x+e.x,u=2*i+o,c=n.y+t.y;return "M"+s+" "+o+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+u+"\n\t\tM"+s+" "+u+"\n\t\tA "+i+" "+i+" 0 "+r+" "+(a?1:0)+"\n\t\t"+l+" "+c}function makeGradient(t,e){var n=arguments.length>2&&void 0!==arguments[2]&&arguments[2],i="path-fill-gradient-"+e+"-"+(n?"lighter":"default"),a=renderVerticalGradient(t,i),r=[1,.6,.2];return n&&(r=[.4,.2,0]),setGradientStop(a,"0%",e,r[0]),setGradientStop(a,"50%",e,r[1]),setGradientStop(a,"100%",e,r[2]),i}function percentageBar(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:PERCENTAGE_BAR_DEFAULT_DEPTH,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:"none";return createSVG("rect",{className:"percentage-bar",x:t,y:e,width:n,height:i,fill:r,styles:{stroke:lightenDarkenColor(r,-25),"stroke-dasharray":"0, "+(i+n)+", "+n+", "+i,"stroke-width":a}})}function heatSquare(t,e,n,i,a){var r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:"none",s=arguments.length>6&&void 0!==arguments[6]?arguments[6]:{},o={className:t,x:e,y:n,width:i,height:i,rx:a,fill:r};return Object.keys(s).map(function(t){o[t]=s[t];}),createSVG("rect",o)}function legendBar(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:"none",a=arguments[4];a=arguments.length>5&&void 0!==arguments[5]&&arguments[5]?truncateString(a,LABEL_MAX_CHARS):a;var r={className:"legend-bar",x:0,y:0,width:n,height:"2px",fill:i},s=createSVG("text",{className:"legend-dataset-text",x:0,y:0,dy:2*FONT_SIZE+"px","font-size":1.2*FONT_SIZE+"px","text-anchor":"start",fill:FONT_FILL,innerHTML:a}),o=createSVG("g",{transform:"translate("+t+", "+e+")"});return o.appendChild(createSVG("rect",r)),o.appendChild(s),o}function legendDot(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:"none",a=arguments[4];a=arguments.length>5&&void 0!==arguments[5]&&arguments[5]?truncateString(a,LABEL_MAX_CHARS):a;var r={className:"legend-dot",cx:0,cy:0,r:n,fill:i},s=createSVG("text",{className:"legend-dataset-text",x:0,y:0,dx:FONT_SIZE+"px",dy:FONT_SIZE/3+"px","font-size":1.2*FONT_SIZE+"px","text-anchor":"start",fill:FONT_FILL,innerHTML:a}),o=createSVG("g",{transform:"translate("+t+", "+e+")"});return o.appendChild(createSVG("circle",r)),o.appendChild(s),o}function makeText(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:{},r=a.fontSize||FONT_SIZE;return createSVG("text",{className:t,x:e,y:n,dy:(void 0!==a.dy?a.dy:r/2)+"px","font-size":r+"px",fill:a.fill||FONT_FILL,"text-anchor":a.textAnchor||"start",innerHTML:i})}function makeVertLine(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:{};a.stroke||(a.stroke=BASE_LINE_COLOR);var r=createSVG("line",{className:"line-vertical "+a.className,x1:0,x2:0,y1:n,y2:i,styles:{stroke:a.stroke}}),s=createSVG("text",{x:0,y:n>i?n+LABEL_MARGIN:n-LABEL_MARGIN-FONT_SIZE,dy:FONT_SIZE+"px","font-size":FONT_SIZE+"px","text-anchor":"middle",innerHTML:e+""}),o=createSVG("g",{transform:"translate("+t+", 0)"});return o.appendChild(r),o.appendChild(s),o}function makeHoriLine(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:{};a.stroke||(a.stroke=BASE_LINE_COLOR),a.lineType||(a.lineType=""),a.shortenNumbers&&(e=shortenLargeNumber(e));var r=createSVG("line",{className:"line-horizontal "+a.className+("dashed"===a.lineType?"dashed":""),x1:n,x2:i,y1:0,y2:0,styles:{stroke:a.stroke}}),s=createSVG("text",{x:n<i?n-LABEL_MARGIN:n+LABEL_MARGIN,y:0,dy:FONT_SIZE/2-2+"px","font-size":FONT_SIZE+"px","text-anchor":n<i?"end":"start",innerHTML:e+""}),o=createSVG("g",{transform:"translate(0, "+t+")","stroke-opacity":1});return 0!==s&&"0"!==s||(o.style.stroke="rgba(27, 31, 35, 0.6)"),o.appendChild(r),o.appendChild(s),o}function yLine(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:{};isValidNumber(t)||(t=0),i.pos||(i.pos="left"),i.offset||(i.offset=0),i.mode||(i.mode="span"),i.stroke||(i.stroke=BASE_LINE_COLOR),i.className||(i.className="");var a=-1*AXIS_TICK_LENGTH,r="span"===i.mode?n+AXIS_TICK_LENGTH:0;return "tick"===i.mode&&"right"===i.pos&&(a=n+AXIS_TICK_LENGTH,r=n),a+=i.offset,r+=i.offset,makeHoriLine(t,e,a,r,{stroke:i.stroke,className:i.className,lineType:i.lineType,shortenNumbers:i.shortenNumbers})}function xLine(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:{};isValidNumber(t)||(t=0),i.pos||(i.pos="bottom"),i.offset||(i.offset=0),i.mode||(i.mode="span"),i.stroke||(i.stroke=BASE_LINE_COLOR),i.className||(i.className="");var a=n+AXIS_TICK_LENGTH,r="span"===i.mode?-1*AXIS_TICK_LENGTH:n;return "tick"===i.mode&&"top"===i.pos&&(a=-1*AXIS_TICK_LENGTH,r=0),makeVertLine(t,e,a,r,{stroke:i.stroke,className:i.className,lineType:i.lineType})}function yMarker(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:{};i.labelPos||(i.labelPos="right");var a=createSVG("text",{className:"chart-label",x:"left"===i.labelPos?LABEL_MARGIN:n-getStringWidth(e,5)-LABEL_MARGIN,y:0,dy:FONT_SIZE/-2+"px","font-size":FONT_SIZE+"px","text-anchor":"start",innerHTML:e+""}),r=makeHoriLine(t,"",0,n,{stroke:i.stroke||BASE_LINE_COLOR,className:i.className||"",lineType:i.lineType});return r.appendChild(a),r}function yRegion(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:{},r=t-e,s=createSVG("rect",{className:"bar mini",styles:{fill:"rgba(228, 234, 239, 0.49)",stroke:BASE_LINE_COLOR,"stroke-dasharray":n+", "+r},x:0,y:0,width:n,height:r});a.labelPos||(a.labelPos="right");var o=createSVG("text",{className:"chart-label",x:"left"===a.labelPos?LABEL_MARGIN:n-getStringWidth(i+"",4.5)-LABEL_MARGIN,y:0,dy:FONT_SIZE/-2+"px","font-size":FONT_SIZE+"px","text-anchor":"start",innerHTML:i+""}),l=createSVG("g",{transform:"translate(0, "+e+")"});return l.appendChild(s),l.appendChild(o),l}function datasetBar(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:"",r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=arguments.length>6&&void 0!==arguments[6]?arguments[6]:0,o=arguments.length>7&&void 0!==arguments[7]?arguments[7]:{},l=getBarHeightAndYAttr(e,o.zeroLine),u=_slicedToArray(l,2),c=u[0],h=u[1];h-=s,0===c&&(c=o.minHeight,h-=o.minHeight),isValidNumber(t)||(t=0),isValidNumber(h)||(h=0),isValidNumber(c,!0)||(c=0),isValidNumber(n,!0)||(n=0);var d=createSVG("rect",{className:"bar mini",style:"fill: "+i,"data-point-index":r,x:t,y:h,width:n,height:c});if((a+="")||a.length){d.setAttribute("y",0),d.setAttribute("x",0);var f=createSVG("text",{className:"data-point-value",x:n/2,y:0,dy:FONT_SIZE/2*-1+"px","font-size":FONT_SIZE+"px","text-anchor":"middle",innerHTML:a}),p=createSVG("g",{"data-point-index":r,transform:"translate("+t+", "+h+")"});return p.appendChild(d),p.appendChild(f),p}return d}function datasetDot(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:"",r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:0,s=createSVG("circle",{style:"fill: "+i,"data-point-index":r,cx:t,cy:e,r:n});if((a+="")||a.length){s.setAttribute("cy",0),s.setAttribute("cx",0);var o=createSVG("text",{className:"data-point-value",x:0,y:0,dy:FONT_SIZE/2*-1-n+"px","font-size":FONT_SIZE+"px","text-anchor":"middle",innerHTML:a}),l=createSVG("g",{"data-point-index":r,transform:"translate("+t+", "+e+")"});return l.appendChild(s),l.appendChild(o),l}return s}function getPaths(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:{},a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:{},r=e.map(function(e,n){return t[n]+","+e}).join("L");i.spline&&(r=getSplineCurvePointsStr(t,e));var s=makePath("M"+r,"line-graph-path",n);if(i.heatline){var o=makeGradient(a.svgDefs,n);s.style.stroke="url(#"+o+")";}var l={path:s};if(i.regionFill){var u=makeGradient(a.svgDefs,n,!0),c="M"+t[0]+","+a.zeroLine+"L"+r+"L"+t.slice(-1)[0]+","+a.zeroLine;l.region=makePath(c,"region-fill","none","url(#"+u+")");}return l}function translate(t,e,n,i){var a="string"==typeof e?e:e.join(", ");return [t,{transform:n.join(", ")},i,STD_EASING,"translate",{transform:a}]}function translateVertLine(t,e,n){return translate(t,[n,0],[e,0],MARKER_LINE_ANIM_DUR)}function translateHoriLine(t,e,n){return translate(t,[0,n],[0,e],MARKER_LINE_ANIM_DUR)}function animateRegion(t,e,n,i){var a=e-n,r=t.childNodes[0];return [[r,{height:a,"stroke-dasharray":r.getAttribute("width")+", "+a},MARKER_LINE_ANIM_DUR,STD_EASING],translate(t,[0,i],[0,n],MARKER_LINE_ANIM_DUR)]}function animateBar(t,e,n,i){var a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:0,r=getBarHeightAndYAttr(n,(arguments.length>5&&void 0!==arguments[5]?arguments[5]:{}).zeroLine),s=_slicedToArray$2(r,2),o=s[0],l=s[1];return l-=a,"rect"!==t.nodeName?[[t.childNodes[0],{width:i,height:o},UNIT_ANIM_DUR,STD_EASING],translate(t,t.getAttribute("transform").split("(")[1].slice(0,-1),[e,l],MARKER_LINE_ANIM_DUR)]:[[t,{width:i,height:o,x:e,y:l},UNIT_ANIM_DUR,STD_EASING]]}function animateDot(t,e,n){return "circle"!==t.nodeName?[translate(t,t.getAttribute("transform").split("(")[1].slice(0,-1),[e,n],MARKER_LINE_ANIM_DUR)]:[[t,{cx:e,cy:n},UNIT_ANIM_DUR,STD_EASING]]}function animatePath(t,e,n,i,a){var r=[],s=n.map(function(t,n){return e[n]+","+t}).join("L");a&&(s=getSplineCurvePointsStr(e,n));var o=[t.path,{d:"M"+s},PATH_ANIM_DUR,STD_EASING];if(r.push(o),t.region){var l=e[0]+","+i+"L",u="L"+e.slice(-1)[0]+", "+i,c=[t.region,{d:"M"+l+s+u},PATH_ANIM_DUR,STD_EASING];r.push(c);}return r}function animatePathStr(t,e){return [t,{d:e},UNIT_ANIM_DUR,STD_EASING]}function _toConsumableArray$1(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function animateSVGElement(t,e,n){var i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:"linear",a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:void 0,r=arguments.length>5&&void 0!==arguments[5]?arguments[5]:{},s=t.cloneNode(!0),o=t.cloneNode(!0);for(var l in e){var u=void 0;u="transform"===l?document.createElementNS("http://www.w3.org/2000/svg","animateTransform"):document.createElementNS("http://www.w3.org/2000/svg","animate");var c=r[l]||t.getAttribute(l),h=e[l],d={attributeName:l,from:c,to:h,begin:"0s",dur:n/1e3+"s",values:c+";"+h,keySplines:EASING[i],keyTimes:"0;1",calcMode:"spline",fill:"freeze"};a&&(d.type=a);for(var f in d)u.setAttribute(f,d[f]);s.appendChild(u),a?o.setAttribute(l,"translate("+h+")"):o.setAttribute(l,h);}return [s,o]}function transform(t,e){t.style.transform=e,t.style.webkitTransform=e,t.style.msTransform=e,t.style.mozTransform=e,t.style.oTransform=e;}function animateSVG(t,e){var n=[],i=[];e.map(function(t){var e=t[0],a=e.parentNode,r=void 0,s=void 0;t[0]=e;var o=animateSVGElement.apply(void 0,_toConsumableArray$1(t)),l=_slicedToArray$1(o,2);r=l[0],s=l[1],n.push(s),i.push([r,a]),a.replaceChild(r,e);});var a=t.cloneNode(!0);return i.map(function(t,i){t[1].replaceChild(n[i],t[0]),e[i][0]=n[i];}),a}function runSMILAnimation(t,e,n){if(0!==n.length){var i=animateSVG(e,n);e.parentNode==t&&(t.removeChild(e),t.appendChild(i)),setTimeout(function(){i.parentNode==t&&(t.removeChild(i),t.appendChild(e));},REPLACE_ALL_NEW_DUR);}}function downloadFile(t,e){var n=document.createElement("a");n.style="display: none";var i=new Blob(e,{type:"image/svg+xml; charset=utf-8"}),a=window.URL.createObjectURL(i);n.href=a,n.download=t,document.body.appendChild(n),n.click(),setTimeout(function(){document.body.removeChild(n),window.URL.revokeObjectURL(a);},300);}function prepareForExport(t){var e=t.cloneNode(!0);e.classList.add("chart-container"),e.setAttribute("xmlns","http://www.w3.org/2000/svg"),e.setAttribute("xmlns:xlink","http://www.w3.org/1999/xlink");var n=$.create("style",{innerHTML:CSSTEXT});e.insertBefore(n,e.firstChild);var i=$.create("div");return i.appendChild(e),i.innerHTML}function _classCallCheck$3(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _classCallCheck$2(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn$1(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits$1(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function treatAsUtc(t){var e=new Date(t);return e.setMinutes(e.getMinutes()-e.getTimezoneOffset()),e}function getYyyyMmDd(t){var e=t.getDate(),n=t.getMonth()+1;return [t.getFullYear(),(n>9?"":"0")+n,(e>9?"":"0")+e].join("-")}function clone(t){return new Date(t.getTime())}function getWeeksBetween(t,e){var n=setDayToSunday(t);return Math.ceil(getDaysBetween(n,e)/NO_OF_DAYS_IN_WEEK)}function getDaysBetween(t,e){var n=SEC_IN_DAY*NO_OF_MILLIS;return (treatAsUtc(e)-treatAsUtc(t))/n}function areInSameMonth(t,e){return t.getMonth()===e.getMonth()&&t.getFullYear()===e.getFullYear()}function getMonthName(t){var e=arguments.length>1&&void 0!==arguments[1]&&arguments[1],n=MONTH_NAMES[t];return e?n.slice(0,3):n}function getLastDateInMonth(t,e){return new Date(e,t+1,0)}function setDayToSunday(t){var e=clone(t),n=e.getDay();return 0!==n&&addDays(e,-1*n),e}function addDays(t,e){t.setDate(t.getDate()+e);}function _classCallCheck$5(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function getComponent(t,e,n){var i=Object.keys(componentConfigs).filter(function(e){return t.includes(e)}),a=componentConfigs[i[0]];return Object.assign(a,{constants:e,getData:n}),new ChartComponent(a)}function _toConsumableArray(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function _classCallCheck$1(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function _toConsumableArray$2(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function _classCallCheck$6(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn$2(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits$2(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function _toConsumableArray$4(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function normalize(t){if(0===t)return [0,0];if(isNaN(t))return {mantissa:-6755399441055744,exponent:972};var e=t>0?1:-1;if(!isFinite(t))return {mantissa:4503599627370496*e,exponent:972};t=Math.abs(t);var n=Math.floor(Math.log10(t));return [e*(t/Math.pow(10,n)),n]}function getChartRangeIntervals(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:0,n=Math.ceil(t),i=Math.floor(e),a=n-i,r=a,s=1;a>5&&(a%2!=0&&(a=++n-i),r=a/2,s=2),a<=2&&(s=a/(r=4)),0===a&&(r=5,s=1);for(var o=[],l=0;l<=r;l++)o.push(i+s*l);return o}function getChartIntervals(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:0,n=normalize(t),i=_slicedToArray$4(n,2),a=i[0],r=i[1],s=e?e/Math.pow(10,r):0,o=getChartRangeIntervals(a=a.toFixed(6),s);return o=o.map(function(t){return t*Math.pow(10,r)})}function calcChartIntervals(t){function e(t,e){for(var n=getChartIntervals(t),i=n[1]-n[0],a=0,r=1;a<e;r++)a+=i,n.unshift(-1*a);return n}var n=arguments.length>1&&void 0!==arguments[1]&&arguments[1],i=Math.max.apply(Math,_toConsumableArray$4(t)),a=Math.min.apply(Math,_toConsumableArray$4(t)),r=[];if(i>=0&&a>=0)normalize(i)[1],r=n?getChartIntervals(i,a):getChartIntervals(i);else if(i>0&&a<0){var s=Math.abs(a);i>=s?(normalize(i)[1],r=e(i,s)):(normalize(s)[1],r=e(s,i).map(function(t){return -1*t}));}else if(i<=0&&a<=0){var o=Math.abs(a),l=Math.abs(i);normalize(o)[1],r=(r=n?getChartIntervals(o,l):getChartIntervals(o)).reverse().map(function(t){return -1*t});}return r}function getZeroIndex(t){var e=getIntervalSize(t);return t.indexOf(0)>=0?t.indexOf(0):t[0]>0?-1*t[0]/e:-1*t[t.length-1]/e+(t.length-1)}function getIntervalSize(t){return t[1]-t[0]}function getValueRange(t){return t[t.length-1]-t[0]}function scale(t,e){return floatTwo(e.zeroLine-t*e.scaleMultiplier)}function getClosestInArray(t,e){var n=arguments.length>2&&void 0!==arguments[2]&&arguments[2],i=e.reduce(function(e,n){return Math.abs(n-t)<Math.abs(e-t)?n:e},[]);return n?e.indexOf(i):i}function calcDistribution(t,e){for(var n=Math.max.apply(Math,_toConsumableArray$4(t)),i=1/(e-1),a=[],r=0;r<e;r++){var s=n*(i*r);a.push(s);}return a}function getMaxCheckpoint(t,e){return e.filter(function(e){return e<t}).length}function _toConsumableArray$3(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function _classCallCheck$7(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn$3(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits$3(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function _toConsumableArray$6(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function dataPrep(t,e){t.labels=t.labels||[];var n=t.labels.length,i=t.datasets,a=new Array(n).fill(0);return i||(i=[{values:a}]),i.map(function(t){if(t.values){var i=t.values;i=(i=i.map(function(t){return isNaN(t)?0:t})).length>n?i.slice(0,n):fillArray(i,n-i.length,0);}else t.values=a;t.chartType||(t.chartType=e);}),t.yRegions&&t.yRegions.map(function(t){if(t.end<t.start){var e=[t.end,t.start];t.start=e[0],t.end=e[1];}}),t}function zeroDataPrep(t){var e=t.labels.length,n=new Array(e).fill(0),i={labels:t.labels.slice(0,-1),datasets:t.datasets.map(function(t){return {name:"",values:n.slice(0,-1),chartType:t.chartType}})};return t.yMarkers&&(i.yMarkers=[{value:0,label:""}]),t.yRegions&&(i.yRegions=[{start:0,end:0,label:""}]),i}function getShortenedLabels(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:[],n=!(arguments.length>2&&void 0!==arguments[2])||arguments[2],i=t/e.length;i<=0&&(i=1);var a=i/DEFAULT_CHAR_WIDTH,r=void 0;if(n){var s=Math.max.apply(Math,_toConsumableArray$6(e.map(function(t){return t.length})));r=Math.ceil(s/a);}return e.map(function(t,e){return (t+="").length>a&&(n?e%r!=0&&(t=""):t=a-3>0?t.slice(0,a-3)+" ...":t.slice(0,a)+".."),t})}function _toConsumableArray$5(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function _classCallCheck$8(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn$4(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits$4(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function _toConsumableArray$7(t){if(Array.isArray(t)){for(var e=0,n=Array(t.length);e<t.length;e++)n[e]=t[e];return n}return Array.from(t)}function _classCallCheck$9(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function _possibleConstructorReturn$5(t,e){if(!t)throw new ReferenceError("this hasn't been initialised - super() hasn't been called");return !e||"object"!=typeof e&&"function"!=typeof e?t:e}function _inherits$5(t,e){if("function"!=typeof e&&null!==e)throw new TypeError("Super expression must either be null or a function, not "+typeof e);t.prototype=Object.create(e&&e.prototype,{constructor:{value:t,enumerable:!1,writable:!0,configurable:!0}}),e&&(Object.setPrototypeOf?Object.setPrototypeOf(t,e):t.__proto__=e);}function _classCallCheck(t,e){if(!(t instanceof e))throw new TypeError("Cannot call a class as a function")}function getChartByType(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:"line",e=arguments[1],n=arguments[2];return "axis-mixed"===t?(n.type="line",new AxisChart(e,n)):chartTypes[t]?new chartTypes[t](e,n):void console.error("Undefined chart type: "+t)}Object.defineProperty(exports,"__esModule",{value:!0});var css_248z='.chart-container{position:relative;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif}.chart-container .axis,.chart-container .chart-label{fill:#555b51}.chart-container .axis line,.chart-container .chart-label line{stroke:#dadada}.chart-container .dataset-units circle{stroke:#fff;stroke-width:2}.chart-container .dataset-units path{fill:none;stroke-opacity:1;stroke-width:2px}.chart-container .dataset-path{stroke-width:2px}.chart-container .path-group path{fill:none;stroke-opacity:1;stroke-width:2px}.chart-container line.dashed{stroke-dasharray:5,3}.chart-container .axis-line .specific-value{text-anchor:start}.chart-container .axis-line .y-line{text-anchor:end}.chart-container .axis-line .x-line{text-anchor:middle}.chart-container .legend-dataset-text{fill:#6c7680;font-weight:600}.graph-svg-tip{position:absolute;z-index:99999;padding:10px;font-size:12px;color:#959da5;text-align:center;background:rgba(0,0,0,.8);border-radius:3px}.graph-svg-tip ol,.graph-svg-tip ul{padding-left:0;display:-webkit-box;display:-ms-flexbox;display:flex}.graph-svg-tip ul.data-point-list li{min-width:90px;-webkit-box-flex:1;-ms-flex:1;flex:1;font-weight:600}.graph-svg-tip strong{color:#dfe2e5;font-weight:600}.graph-svg-tip .svg-pointer{position:absolute;height:5px;margin:0 0 0 -5px;content:" ";border:5px solid transparent;border-top-color:rgba(0,0,0,.8)}.graph-svg-tip.comparison{padding:0;text-align:left;pointer-events:none}.graph-svg-tip.comparison .title{display:block;padding:10px;margin:0;font-weight:600;line-height:1;pointer-events:none}.graph-svg-tip.comparison ul{margin:0;white-space:nowrap;list-style:none}.graph-svg-tip.comparison li{display:inline-block;padding:5px 10px}';styleInject(css_248z);var _typeof="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t};$.create=function(t,e){var n=document.createElement(t);for(var i in e){var a=e[i];if("inside"===i)$(a).appendChild(n);else if("around"===i){var r=$(a);r.parentNode.insertBefore(n,r),n.appendChild(r);}else "styles"===i?"object"===(void 0===a?"undefined":_typeof(a))&&Object.keys(a).map(function(t){n.style[t]=a[t];}):i in n?n[i]=a:n.setAttribute(i,a);}return n};var BASE_MEASURES={margins:{top:10,bottom:10,left:20,right:20},paddings:{top:20,bottom:40,left:30,right:10},baseHeight:240,titleHeight:20,legendHeight:30,titleFontSize:12},INIT_CHART_UPDATE_TIMEOUT=700,CHART_POST_ANIMATE_TIMEOUT=400,AXIS_LEGEND_BAR_SIZE=100,BAR_CHART_SPACE_RATIO=.5,MIN_BAR_PERCENT_HEIGHT=0,LINE_CHART_DOT_SIZE=4,DOT_OVERLAY_SIZE_INCR=4,PERCENTAGE_BAR_DEFAULT_HEIGHT=20,PERCENTAGE_BAR_DEFAULT_DEPTH=2,HEATMAP_DISTRIBUTION_SIZE=5,HEATMAP_SQUARE_SIZE=10,HEATMAP_GUTTER_SIZE=2,DEFAULT_CHAR_WIDTH=7,TOOLTIP_POINTER_TRIANGLE_HEIGHT=5,DEFAULT_CHART_COLORS=["light-blue","blue","violet","red","orange","yellow","green","light-green","purple","magenta","light-grey","dark-grey"],HEATMAP_COLORS_GREEN=["#ebedf0","#c6e48b","#7bc96f","#239a3b","#196127"],DEFAULT_COLORS={bar:DEFAULT_CHART_COLORS,line:DEFAULT_CHART_COLORS,pie:DEFAULT_CHART_COLORS,percentage:DEFAULT_CHART_COLORS,heatmap:HEATMAP_COLORS_GREEN,donut:DEFAULT_CHART_COLORS},ANGLE_RATIO=Math.PI/180,FULL_ANGLE=360,_createClass$3=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),SvgTip=function(){function t(e){var n=e.parent,i=void 0===n?null:n,a=e.colors,r=void 0===a?[]:a;_classCallCheck$4(this,t),this.parent=i,this.colors=r,this.titleName="",this.titleValue="",this.listValues=[],this.titleValueFirst=0,this.x=0,this.y=0,this.top=0,this.left=0,this.setup();}return _createClass$3(t,[{key:"setup",value:function(){this.makeTooltip();}},{key:"refresh",value:function(){this.fill(),this.calcPosition();}},{key:"makeTooltip",value:function(){var t=this;this.container=$.create("div",{inside:this.parent,className:"graph-svg-tip comparison",innerHTML:'<span class="title"></span>\n\t\t\t\t<ul class="data-point-list"></ul>\n\t\t\t\t<div class="svg-pointer"></div>'}),this.hideTip(),this.title=this.container.querySelector(".title"),this.dataPointList=this.container.querySelector(".data-point-list"),this.parent.addEventListener("mouseleave",function(){t.hideTip();});}},{key:"fill",value:function(){var t=this,e=void 0;this.index&&this.container.setAttribute("data-point-index",this.index),e=this.titleValueFirst?"<strong>"+this.titleValue+"</strong>"+this.titleName:this.titleName+"<strong>"+this.titleValue+"</strong>",this.title.innerHTML=e,this.dataPointList.innerHTML="",this.listValues.map(function(e,n){var i=t.colors[n]||"black",a=0===e.formatted||e.formatted?e.formatted:e.value,r=$.create("li",{styles:{"border-top":"3px solid "+i},innerHTML:'<strong style="display: block;">'+(0===a||a?a:"")+"</strong>\n\t\t\t\t\t"+(e.title?e.title:"")});t.dataPointList.appendChild(r);});}},{key:"calcPosition",value:function(){var t=this.container.offsetWidth;this.top=this.y-this.container.offsetHeight-TOOLTIP_POINTER_TRIANGLE_HEIGHT,this.left=this.x-t/2;var e=this.parent.offsetWidth-t,n=this.container.querySelector(".svg-pointer");if(this.left<0)n.style.left="calc(50% - "+-1*this.left+"px)",this.left=0;else if(this.left>e){var i="calc(50% + "+(this.left-e)+"px)";n.style.left=i,this.left=e;}else n.style.left="50%";}},{key:"setValues",value:function(t,e){var n=arguments.length>2&&void 0!==arguments[2]?arguments[2]:{},i=arguments.length>3&&void 0!==arguments[3]?arguments[3]:[],a=arguments.length>4&&void 0!==arguments[4]?arguments[4]:-1;this.titleName=n.name,this.titleValue=n.value,this.listValues=i,this.x=t,this.y=e,this.titleValueFirst=n.valueFirst||0,this.index=a,this.refresh();}},{key:"hideTip",value:function(){this.container.style.top="0px",this.container.style.left="0px",this.container.style.opacity="0";}},{key:"showTip",value:function(){this.container.style.top=this.top+"px",this.container.style.left=this.left+"px",this.container.style.opacity="1";}}]),t}(),PRESET_COLOR_MAP={"light-blue":"#7cd6fd",blue:"#5e64ff",violet:"#743ee2",red:"#ff5858",orange:"#ffa00a",yellow:"#feef72",green:"#28a745","light-green":"#98d85b",purple:"#b554ff",magenta:"#ffa3ef",black:"#36114C",grey:"#bdd3e6","light-grey":"#f0f4f7","dark-grey":"#b8c2cc"},getColor=function(t){return PRESET_COLOR_MAP[t]||t},_slicedToArray=function(){function t(t,e){var n=[],i=!0,a=!1,r=void 0;try{for(var s,o=t[Symbol.iterator]();!(i=(s=o.next()).done)&&(n.push(s.value),!e||n.length!==e);i=!0);}catch(t){a=!0,r=t;}finally{try{!i&&o.return&&o.return();}finally{if(a)throw r}}return n}return function(e,n){if(Array.isArray(e))return e;if(Symbol.iterator in Object(e))return t(e,n);throw new TypeError("Invalid attempt to destructure non-iterable instance")}}(),_typeof$1="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(t){return typeof t}:function(t){return t&&"function"==typeof Symbol&&t.constructor===Symbol&&t!==Symbol.prototype?"symbol":typeof t},AXIS_TICK_LENGTH=6,LABEL_MARGIN=4,LABEL_MAX_CHARS=15,FONT_SIZE=10,BASE_LINE_COLOR="#dadada",FONT_FILL="#555b51",makeOverlay={bar:function(t){var e=void 0;"rect"!==t.nodeName&&(e=t.getAttribute("transform"),t=t.childNodes[0]);var n=t.cloneNode();return n.style.fill="#000000",n.style.opacity="0.4",e&&n.setAttribute("transform",e),n},dot:function(t){var e=void 0;"circle"!==t.nodeName&&(e=t.getAttribute("transform"),t=t.childNodes[0]);var n=t.cloneNode(),i=t.getAttribute("r"),a=t.getAttribute("fill");return n.setAttribute("r",parseInt(i)+DOT_OVERLAY_SIZE_INCR),n.setAttribute("fill",a),n.style.opacity="0.6",e&&n.setAttribute("transform",e),n},heat_square:function(t){var e=void 0;"circle"!==t.nodeName&&(e=t.getAttribute("transform"),t=t.childNodes[0]);var n=t.cloneNode(),i=t.getAttribute("r"),a=t.getAttribute("fill");return n.setAttribute("r",parseInt(i)+DOT_OVERLAY_SIZE_INCR),n.setAttribute("fill",a),n.style.opacity="0.6",e&&n.setAttribute("transform",e),n}},updateOverlay={bar:function(t,e){var n=void 0;"rect"!==t.nodeName&&(n=t.getAttribute("transform"),t=t.childNodes[0]);var i=["x","y","width","height"];Object.values(t.attributes).filter(function(t){return i.includes(t.name)&&t.specified}).map(function(t){e.setAttribute(t.name,t.nodeValue);}),n&&e.setAttribute("transform",n);},dot:function(t,e){var n=void 0;"circle"!==t.nodeName&&(n=t.getAttribute("transform"),t=t.childNodes[0]);var i=["cx","cy"];Object.values(t.attributes).filter(function(t){return i.includes(t.name)&&t.specified}).map(function(t){e.setAttribute(t.name,t.nodeValue);}),n&&e.setAttribute("transform",n);},heat_square:function(t,e){var n=void 0;"circle"!==t.nodeName&&(n=t.getAttribute("transform"),t=t.childNodes[0]);var i=["cx","cy"];Object.values(t.attributes).filter(function(t){return i.includes(t.name)&&t.specified}).map(function(t){e.setAttribute(t.name,t.nodeValue);}),n&&e.setAttribute("transform",n);}},_slicedToArray$2=function(){function t(t,e){var n=[],i=!0,a=!1,r=void 0;try{for(var s,o=t[Symbol.iterator]();!(i=(s=o.next()).done)&&(n.push(s.value),!e||n.length!==e);i=!0);}catch(t){a=!0,r=t;}finally{try{!i&&o.return&&o.return();}finally{if(a)throw r}}return n}return function(e,n){if(Array.isArray(e))return e;if(Symbol.iterator in Object(e))return t(e,n);throw new TypeError("Invalid attempt to destructure non-iterable instance")}}(),UNIT_ANIM_DUR=350,PATH_ANIM_DUR=350,MARKER_LINE_ANIM_DUR=UNIT_ANIM_DUR,REPLACE_ALL_NEW_DUR=250,STD_EASING="easein",_slicedToArray$1=function(){function t(t,e){var n=[],i=!0,a=!1,r=void 0;try{for(var s,o=t[Symbol.iterator]();!(i=(s=o.next()).done)&&(n.push(s.value),!e||n.length!==e);i=!0);}catch(t){a=!0,r=t;}finally{try{!i&&o.return&&o.return();}finally{if(a)throw r}}return n}return function(e,n){if(Array.isArray(e))return e;if(Symbol.iterator in Object(e))return t(e,n);throw new TypeError("Invalid attempt to destructure non-iterable instance")}}(),EASING={ease:"0.25 0.1 0.25 1",linear:"0 0 1 1",easein:"0.1 0.8 0.2 1",easeout:"0 0 0.58 1",easeinout:"0.42 0 0.58 1"},CSSTEXT=".chart-container{position:relative;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell','Fira Sans','Droid Sans','Helvetica Neue',sans-serif}.chart-container .axis,.chart-container .chart-label{fill:#555b51}.chart-container .axis line,.chart-container .chart-label line{stroke:#dadada}.chart-container .dataset-units circle{stroke:#fff;stroke-width:2}.chart-container .dataset-units path{fill:none;stroke-opacity:1;stroke-width:2px}.chart-container .dataset-path{stroke-width:2px}.chart-container .path-group path{fill:none;stroke-opacity:1;stroke-width:2px}.chart-container line.dashed{stroke-dasharray:5,3}.chart-container .axis-line .specific-value{text-anchor:start}.chart-container .axis-line .y-line{text-anchor:end}.chart-container .axis-line .x-line{text-anchor:middle}.chart-container .legend-dataset-text{fill:#6c7680;font-weight:600}.graph-svg-tip{position:absolute;z-index:99999;padding:10px;font-size:12px;color:#959da5;text-align:center;background:rgba(0,0,0,.8);border-radius:3px}.graph-svg-tip ul{padding-left:0;display:flex}.graph-svg-tip ol{padding-left:0;display:flex}.graph-svg-tip ul.data-point-list li{min-width:90px;flex:1;font-weight:600}.graph-svg-tip strong{color:#dfe2e5;font-weight:600}.graph-svg-tip .svg-pointer{position:absolute;height:5px;margin:0 0 0 -5px;content:' ';border:5px solid transparent;border-top-color:rgba(0,0,0,.8)}.graph-svg-tip.comparison{padding:0;text-align:left;pointer-events:none}.graph-svg-tip.comparison .title{display:block;padding:10px;margin:0;font-weight:600;line-height:1;pointer-events:none}.graph-svg-tip.comparison ul{margin:0;white-space:nowrap;list-style:none}.graph-svg-tip.comparison li{display:inline-block;padding:5px 10px}",_createClass$2=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),BaseChart=function(){function t(e,n){if(_classCallCheck$3(this,t),this.parent="string"==typeof e?document.querySelector(e):e,!(this.parent instanceof HTMLElement))throw new Error("No `parent` element to render on was provided.");this.rawChartArgs=n,this.title=n.title||"",this.type=n.type||"",this.realData=this.prepareData(n.data),this.data=this.prepareFirstData(this.realData),this.colors=this.validateColors(n.colors,this.type),this.config={showTooltip:1,showLegend:1,isNavigable:n.isNavigable||0,animate:void 0!==n.animate?n.animate:1,truncateLegends:n.truncateLegends||1},this.measures=JSON.parse(JSON.stringify(BASE_MEASURES));var i=this.measures;this.setMeasures(n),this.title.length||(i.titleHeight=0),this.config.showLegend||(i.legendHeight=0),this.argHeight=n.height||i.baseHeight,this.state={},this.options={},this.initTimeout=INIT_CHART_UPDATE_TIMEOUT,this.config.isNavigable&&(this.overlays=[]),this.configure(n);}return _createClass$2(t,[{key:"prepareData",value:function(t){return t}},{key:"prepareFirstData",value:function(t){return t}},{key:"validateColors",value:function(t,e){var n=[];return (t=(t||[]).concat(DEFAULT_COLORS[e])).forEach(function(t){var e=getColor(t);isValidColor(e)?n.push(e):console.warn('"'+t+'" is not a valid color.');}),n}},{key:"setMeasures",value:function(){}},{key:"configure",value:function(){var t=this,e=this.argHeight;this.baseHeight=e,this.height=e-getExtraHeight(this.measures),this.boundDrawFn=function(){return t.draw(!0)},window.addEventListener("resize",this.boundDrawFn),window.addEventListener("orientationchange",this.boundDrawFn);}},{key:"destroy",value:function(){window.removeEventListener("resize",this.boundDrawFn),window.removeEventListener("orientationchange",this.boundDrawFn);}},{key:"setup",value:function(){this.makeContainer(),this.updateWidth(),this.makeTooltip(),this.draw(!1,!0);}},{key:"makeContainer",value:function(){this.parent.innerHTML="";var t={inside:this.parent,className:"chart-container"};this.independentWidth&&(t.styles={width:this.independentWidth+"px"}),this.container=$.create("div",t);}},{key:"makeTooltip",value:function(){this.tip=new SvgTip({parent:this.container,colors:this.colors}),this.bindTooltip();}},{key:"bindTooltip",value:function(){}},{key:"draw",value:function(){var t=this,e=arguments.length>0&&void 0!==arguments[0]&&arguments[0],n=arguments.length>1&&void 0!==arguments[1]&&arguments[1];e&&isHidden(this.parent)||(this.updateWidth(),this.calc(e),this.makeChartArea(),this.setupComponents(),this.components.forEach(function(e){return e.setup(t.drawArea)}),this.render(this.components,!1),n&&(this.data=this.realData,setTimeout(function(){t.update(t.data);},this.initTimeout)),this.renderLegend(),this.setupNavigation(n));}},{key:"calc",value:function(){}},{key:"updateWidth",value:function(){this.baseWidth=getElementContentWidth(this.parent),this.width=this.baseWidth-getExtraWidth(this.measures);}},{key:"makeChartArea",value:function(){this.svg&&this.container.removeChild(this.svg);var t=this.measures;this.svg=makeSVGContainer(this.container,"frappe-chart chart",this.baseWidth,this.baseHeight),this.svgDefs=makeSVGDefs(this.svg),this.title.length&&(this.titleEL=makeText("title",t.margins.left,t.margins.top,this.title,{fontSize:t.titleFontSize,fill:"#666666",dy:t.titleFontSize}));var e=getTopOffset(t);this.drawArea=makeSVGGroup(this.type+"-chart chart-draw-area","translate("+getLeftOffset(t)+", "+e+")"),this.config.showLegend&&(e+=this.height+t.paddings.bottom,this.legendArea=makeSVGGroup("chart-legend","translate("+getLeftOffset(t)+", "+e+")")),this.title.length&&this.svg.appendChild(this.titleEL),this.svg.appendChild(this.drawArea),this.config.showLegend&&this.svg.appendChild(this.legendArea),this.updateTipOffset(getLeftOffset(t),getTopOffset(t));}},{key:"updateTipOffset",value:function(t,e){this.tip.offset={x:t,y:e};}},{key:"setupComponents",value:function(){this.components=new Map;}},{key:"update",value:function(t){t||console.error("No data to update."),this.data=this.prepareData(t),this.calc(),this.render(this.components,this.config.animate);}},{key:"render",value:function(){var t=this,e=arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.components,n=!(arguments.length>1&&void 0!==arguments[1])||arguments[1];this.config.isNavigable&&this.overlays.map(function(t){return t.parentNode.removeChild(t)});var i=[];e.forEach(function(t){i=i.concat(t.update(n));}),i.length>0?(runSMILAnimation(this.container,this.svg,i),setTimeout(function(){e.forEach(function(t){return t.make()}),t.updateNav();},CHART_POST_ANIMATE_TIMEOUT)):(e.forEach(function(t){return t.make()}),this.updateNav());}},{key:"updateNav",value:function(){this.config.isNavigable&&(this.makeOverlay(),this.bindUnits());}},{key:"renderLegend",value:function(){}},{key:"setupNavigation",value:function(){var t=this,e=arguments.length>0&&void 0!==arguments[0]&&arguments[0];this.config.isNavigable&&e&&(this.bindOverlay(),this.keyActions={13:this.onEnterKey.bind(this),37:this.onLeftArrow.bind(this),38:this.onUpArrow.bind(this),39:this.onRightArrow.bind(this),40:this.onDownArrow.bind(this)},document.addEventListener("keydown",function(e){isElementInViewport(t.container)&&(e=e||window.event,t.keyActions[e.keyCode]&&t.keyActions[e.keyCode]());}));}},{key:"makeOverlay",value:function(){}},{key:"updateOverlay",value:function(){}},{key:"bindOverlay",value:function(){}},{key:"bindUnits",value:function(){}},{key:"onLeftArrow",value:function(){}},{key:"onRightArrow",value:function(){}},{key:"onUpArrow",value:function(){}},{key:"onDownArrow",value:function(){}},{key:"onEnterKey",value:function(){}},{key:"addDataPoint",value:function(){}},{key:"removeDataPoint",value:function(){}},{key:"getDataPoint",value:function(){}},{key:"setCurrentDataPoint",value:function(){}},{key:"updateDataset",value:function(){}},{key:"export",value:function(){var t=prepareForExport(this.svg);downloadFile(this.title||"Chart",[t]);}}]),t}(),_createClass$1=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),_get$1=function t(e,n,i){null===e&&(e=Function.prototype);var a=Object.getOwnPropertyDescriptor(e,n);if(void 0===a){var r=Object.getPrototypeOf(e);return null===r?void 0:t(r,n,i)}if("value"in a)return a.value;var s=a.get;if(void 0!==s)return s.call(i)},AggregationChart=function(t){function e(t,n){return _classCallCheck$2(this,e),_possibleConstructorReturn$1(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n))}return _inherits$1(e,t),_createClass$1(e,[{key:"configure",value:function(t){_get$1(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"configure",this).call(this,t),this.config.maxSlices=t.maxSlices||20,this.config.maxLegendPoints=t.maxLegendPoints||20;}},{key:"calc",value:function(){var t=this,e=this.state,n=this.config.maxSlices;e.sliceTotals=[];var i=this.data.labels.map(function(e,n){var i=0;return t.data.datasets.map(function(t){i+=t.values[n];}),[i,e]}).filter(function(t){return t[0]>=0}),a=i;if(i.length>n){i.sort(function(t,e){return e[0]-t[0]}),a=i.slice(0,n-1);var r=0;i.slice(n-1).map(function(t){r+=t[0];}),a.push([r,"Rest"]),this.colors[n-1]="grey";}e.labels=[],a.map(function(t){e.sliceTotals.push(t[0]),e.labels.push(t[1]);}),e.grandTotal=e.sliceTotals.reduce(function(t,e){return t+e},0),this.center={x:this.width/2,y:this.height/2};}},{key:"renderLegend",value:function(){var t=this,e=this.state;this.legendArea.textContent="",this.legendTotals=e.sliceTotals.slice(0,this.config.maxLegendPoints);var n=0,i=0;this.legendTotals.map(function(a,r){var s=150,o=Math.floor((t.width-getExtraWidth(t.measures))/s);t.legendTotals.length<o&&(s=t.width/t.legendTotals.length),n>o&&(n=0,i+=20);var l=s*n+5,u=t.config.truncateLegends?truncateString(e.labels[r],s/10):e.labels[r],c=legendDot(l,i,5,t.colors[r],u+": "+a,!1);t.legendArea.appendChild(c),n++;});}}]),e}(BaseChart),NO_OF_YEAR_MONTHS=12,NO_OF_DAYS_IN_WEEK=7,NO_OF_MILLIS=1e3,SEC_IN_DAY=86400,MONTH_NAMES=["January","February","March","April","May","June","July","August","September","October","November","December"],DAY_NAMES_SHORT=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],_slicedToArray$3=function(){function t(t,e){var n=[],i=!0,a=!1,r=void 0;try{for(var s,o=t[Symbol.iterator]();!(i=(s=o.next()).done)&&(n.push(s.value),!e||n.length!==e);i=!0);}catch(t){a=!0,r=t;}finally{try{!i&&o.return&&o.return();}finally{if(a)throw r}}return n}return function(e,n){if(Array.isArray(e))return e;if(Symbol.iterator in Object(e))return t(e,n);throw new TypeError("Invalid attempt to destructure non-iterable instance")}}(),_createClass$4=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),ChartComponent=function(){function t(e){var n=e.layerClass,i=void 0===n?"":n,a=e.layerTransform,r=void 0===a?"":a,s=e.constants,o=e.getData,l=e.makeElements,u=e.animateElements;_classCallCheck$5(this,t),this.layerTransform=r,this.constants=s,this.makeElements=l,this.getData=o,this.animateElements=u,this.store=[],this.labels=[],this.layerClass=i,this.layerClass="function"==typeof this.layerClass?this.layerClass():this.layerClass,this.refresh();}return _createClass$4(t,[{key:"refresh",value:function(t){this.data=t||this.getData();}},{key:"setup",value:function(t){this.layer=makeSVGGroup(this.layerClass,this.layerTransform,t);}},{key:"make",value:function(){this.render(this.data),this.oldData=this.data;}},{key:"render",value:function(t){var e=this;this.store=this.makeElements(t),this.layer.textContent="",this.store.forEach(function(t){e.layer.appendChild(t);}),this.labels.forEach(function(t){e.layer.appendChild(t);});}},{key:"update",value:function(){var t=!(arguments.length>0&&void 0!==arguments[0])||arguments[0];this.refresh();var e=[];return t&&(e=this.animateElements(this.data)||[]),e}}]),t}(),componentConfigs={donutSlices:{layerClass:"donut-slices",makeElements:function(t){return t.sliceStrings.map(function(e,n){var i=makePath(e,"donut-path",t.colors[n],"none",t.strokeWidth);return i.style.transition="transform .3s;",i})},animateElements:function(t){return this.store.map(function(e,n){return animatePathStr(e,t.sliceStrings[n])})}},pieSlices:{layerClass:"pie-slices",makeElements:function(t){return t.sliceStrings.map(function(e,n){var i=makePath(e,"pie-path","none",t.colors[n]);return i.style.transition="transform .3s;",i})},animateElements:function(t){return this.store.map(function(e,n){return animatePathStr(e,t.sliceStrings[n])})}},percentageBars:{layerClass:"percentage-bars",makeElements:function(t){var e=this;return t.xPositions.map(function(n,i){return percentageBar(n,0,t.widths[i],e.constants.barHeight,e.constants.barDepth,t.colors[i])})},animateElements:function(t){if(t)return []}},yAxis:{layerClass:"y axis",makeElements:function(t){var e=this;return t.positions.map(function(n,i){return yLine(n,t.labels[i],e.constants.width,{mode:e.constants.mode,pos:e.constants.pos,shortenNumbers:e.constants.shortenNumbers})})},animateElements:function(t){var e=t.positions,n=t.labels,i=this.oldData.positions,a=this.oldData.labels,r=equilizeNoOfElements(i,e),s=_slicedToArray$3(r,2);i=s[0],e=s[1];var o=equilizeNoOfElements(a,n),l=_slicedToArray$3(o,2);return a=l[0],n=l[1],this.render({positions:i,labels:n}),this.store.map(function(t,n){return translateHoriLine(t,e[n],i[n])})}},xAxis:{layerClass:"x axis",makeElements:function(t){var e=this;return t.positions.map(function(n,i){return xLine(n,t.calcLabels[i],e.constants.height,{mode:e.constants.mode,pos:e.constants.pos})})},animateElements:function(t){var e=t.positions,n=t.calcLabels,i=this.oldData.positions,a=this.oldData.calcLabels,r=equilizeNoOfElements(i,e),s=_slicedToArray$3(r,2);i=s[0],e=s[1];var o=equilizeNoOfElements(a,n),l=_slicedToArray$3(o,2);return a=l[0],n=l[1],this.render({positions:i,calcLabels:n}),this.store.map(function(t,n){return translateVertLine(t,e[n],i[n])})}},yMarkers:{layerClass:"y-markers",makeElements:function(t){var e=this;return t.map(function(t){return yMarker(t.position,t.label,e.constants.width,{labelPos:t.options.labelPos,mode:"span",lineType:"dashed"})})},animateElements:function(t){var e=equilizeNoOfElements(this.oldData,t),n=_slicedToArray$3(e,2);this.oldData=n[0];var i=(t=n[1]).map(function(t){return t.position}),a=t.map(function(t){return t.label}),r=t.map(function(t){return t.options}),s=this.oldData.map(function(t){return t.position});return this.render(s.map(function(t,e){return {position:s[e],label:a[e],options:r[e]}})),this.store.map(function(t,e){return translateHoriLine(t,i[e],s[e])})}},yRegions:{layerClass:"y-regions",makeElements:function(t){var e=this;return t.map(function(t){return yRegion(t.startPos,t.endPos,e.constants.width,t.label,{labelPos:t.options.labelPos})})},animateElements:function(t){var e=equilizeNoOfElements(this.oldData,t),n=_slicedToArray$3(e,2);this.oldData=n[0];var i=(t=n[1]).map(function(t){return t.endPos}),a=t.map(function(t){return t.label}),r=t.map(function(t){return t.startPos}),s=t.map(function(t){return t.options}),o=this.oldData.map(function(t){return t.endPos}),l=this.oldData.map(function(t){return t.startPos});this.render(o.map(function(t,e){return {startPos:l[e],endPos:o[e],label:a[e],options:s[e]}}));var u=[];return this.store.map(function(t,e){u=u.concat(animateRegion(t,r[e],i[e],o[e]));}),u}},heatDomain:{layerClass:function(){return "heat-domain domain-"+this.constants.index},makeElements:function(t){var e=this,n=this.constants,i=n.index,a=n.colWidth,r=n.rowHeight,s=n.squareSize,o=n.radius,l=n.xTranslate,u=0;return this.serializedSubDomains=[],t.cols.map(function(t,n){1===n&&e.labels.push(makeText("domain-name",l,-12,getMonthName(i,!0).toUpperCase(),{fontSize:9})),t.map(function(t,n){if(t.fill){var i={"data-date":t.yyyyMmDd,"data-value":t.dataValue,"data-day":n},a=heatSquare("day",l,u,s,o,t.fill,i);e.serializedSubDomains.push(a);}u+=r;}),u=0,l+=a;}),this.serializedSubDomains},animateElements:function(t){if(t)return []}},barGraph:{layerClass:function(){return "dataset-units dataset-bars dataset-"+this.constants.index},makeElements:function(t){var e=this.constants;return this.unitType="bar",this.units=t.yPositions.map(function(n,i){return datasetBar(t.xPositions[i],n,t.barWidth,e.color,t.labels[i],i,t.offsets[i],{zeroLine:t.zeroLine,barsWidth:t.barsWidth,minHeight:e.minHeight})}),this.units},animateElements:function(t){var e=t.xPositions,n=t.yPositions,i=t.offsets,a=t.labels,r=this.oldData.xPositions,s=this.oldData.yPositions,o=this.oldData.offsets,l=this.oldData.labels,u=equilizeNoOfElements(r,e),c=_slicedToArray$3(u,2);r=c[0],e=c[1];var h=equilizeNoOfElements(s,n),d=_slicedToArray$3(h,2);s=d[0],n=d[1];var f=equilizeNoOfElements(o,i),p=_slicedToArray$3(f,2);o=p[0],i=p[1];var v=equilizeNoOfElements(l,a),g=_slicedToArray$3(v,2);l=g[0],a=g[1],this.render({xPositions:r,yPositions:s,offsets:o,labels:a,zeroLine:this.oldData.zeroLine,barsWidth:this.oldData.barsWidth,barWidth:this.oldData.barWidth});var y=[];return this.store.map(function(a,r){y=y.concat(animateBar(a,e[r],n[r],t.barWidth,i[r],{zeroLine:t.zeroLine}));}),y}},lineGraph:{layerClass:function(){return "dataset-units dataset-line dataset-"+this.constants.index},makeElements:function(t){var e=this.constants;return this.unitType="dot",this.paths={},e.hideLine||(this.paths=getPaths(t.xPositions,t.yPositions,e.color,{heatline:e.heatline,regionFill:e.regionFill,spline:e.spline},{svgDefs:e.svgDefs,zeroLine:t.zeroLine})),this.units=[],e.hideDots||(this.units=t.yPositions.map(function(n,i){return datasetDot(t.xPositions[i],n,t.radius,e.color,e.valuesOverPoints?t.values[i]:"",i)})),Object.values(this.paths).concat(this.units)},animateElements:function(t){var e=t.xPositions,n=t.yPositions,i=t.values,a=this.oldData.xPositions,r=this.oldData.yPositions,s=this.oldData.values,o=equilizeNoOfElements(a,e),l=_slicedToArray$3(o,2);a=l[0],e=l[1];var u=equilizeNoOfElements(r,n),c=_slicedToArray$3(u,2);r=c[0],n=c[1];var h=equilizeNoOfElements(s,i),d=_slicedToArray$3(h,2);s=d[0],i=d[1],this.render({xPositions:a,yPositions:r,values:i,zeroLine:this.oldData.zeroLine,radius:this.oldData.radius});var f=[];return Object.keys(this.paths).length&&(f=f.concat(animatePath(this.paths,e,n,t.zeroLine,this.constants.spline))),this.units.length&&this.units.map(function(t,i){f=f.concat(animateDot(t,e[i],n[i]));}),f}}},_createClass=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),_get=function t(e,n,i){null===e&&(e=Function.prototype);var a=Object.getOwnPropertyDescriptor(e,n);if(void 0===a){var r=Object.getPrototypeOf(e);return null===r?void 0:t(r,n,i)}if("value"in a)return a.value;var s=a.get;if(void 0!==s)return s.call(i)},PercentageChart=function(t){function e(t,n){_classCallCheck$1(this,e);var i=_possibleConstructorReturn(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n));return i.type="percentage",i.setup(),i}return _inherits(e,t),_createClass(e,[{key:"setMeasures",value:function(t){var e=this.measures;this.barOptions=t.barOptions||{};var n=this.barOptions;n.height=n.height||PERCENTAGE_BAR_DEFAULT_HEIGHT,n.depth=n.depth||PERCENTAGE_BAR_DEFAULT_DEPTH,e.paddings.right=30,e.legendHeight=60,e.baseHeight=8*(n.height+.5*n.depth);}},{key:"setupComponents",value:function(){var t=this.state,e=[["percentageBars",{barHeight:this.barOptions.height,barDepth:this.barOptions.depth},function(){return {xPositions:t.xPositions,widths:t.widths,colors:this.colors}}.bind(this)]];this.components=new Map(e.map(function(t){var e=getComponent.apply(void 0,_toConsumableArray(t));return [t[0],e]}));}},{key:"calc",value:function(){var t=this;_get(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"calc",this).call(this);var n=this.state;n.xPositions=[],n.widths=[];var i=0;n.sliceTotals.map(function(e){var a=t.width*e/n.grandTotal;n.widths.push(a),n.xPositions.push(i),i+=a;});}},{key:"makeDataByIndex",value:function(){}},{key:"bindTooltip",value:function(){var t=this,e=this.state;this.container.addEventListener("mousemove",function(n){var i=t.components.get("percentageBars").store,a=n.target;if(i.includes(a)){var r=i.indexOf(a),s=getOffset(t.container),o=getOffset(a),l=o.left-s.left+parseInt(a.getAttribute("width"))/2,u=o.top-s.top,c=(t.formattedLabels&&t.formattedLabels.length>0?t.formattedLabels[r]:t.state.labels[r])+": ",h=e.sliceTotals[r]/e.grandTotal;t.tip.setValues(l,u,{name:c,value:(100*h).toFixed(1)+"%"}),t.tip.showTip();}});}}]),e}(AggregationChart),_createClass$5=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),_get$2=function t(e,n,i){null===e&&(e=Function.prototype);var a=Object.getOwnPropertyDescriptor(e,n);if(void 0===a){var r=Object.getPrototypeOf(e);return null===r?void 0:t(r,n,i)}if("value"in a)return a.value;var s=a.get;if(void 0!==s)return s.call(i)},PieChart=function(t){function e(t,n){_classCallCheck$6(this,e);var i=_possibleConstructorReturn$2(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n));return i.type="pie",i.initTimeout=0,i.init=1,i.setup(),i}return _inherits$2(e,t),_createClass$5(e,[{key:"configure",value:function(t){_get$2(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"configure",this).call(this,t),this.mouseMove=this.mouseMove.bind(this),this.mouseLeave=this.mouseLeave.bind(this),this.hoverRadio=t.hoverRadio||.1,this.config.startAngle=t.startAngle||0,this.clockWise=t.clockWise||!1;}},{key:"calc",value:function(){var t=this;_get$2(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"calc",this).call(this);var n=this.state;this.radius=this.height>this.width?this.center.x:this.center.y;var i=this.radius,a=this.clockWise,r=n.slicesProperties||[];n.sliceStrings=[],n.slicesProperties=[];var s=180-this.config.startAngle;n.sliceTotals.map(function(e,o){var l=s,u=e/n.grandTotal*FULL_ANGLE,c=u>180?1:0,h=a?-u:u,d=s+=h,f=getPositionByAngle(l,i),p=getPositionByAngle(d,i),v=t.init&&r[o],g=void 0,y=void 0;t.init?(g=v?v.startPosition:f,y=v?v.endPosition:f):(g=f,y=p);var m=360===u?makeCircleStr(g,y,t.center,t.radius,a,c):makeArcPathStr(g,y,t.center,t.radius,a,c);n.sliceStrings.push(m),n.slicesProperties.push({startPosition:f,endPosition:p,value:e,total:n.grandTotal,startAngle:l,endAngle:d,angle:h});}),this.init=0;}},{key:"setupComponents",value:function(){var t=this.state,e=[["pieSlices",{},function(){return {sliceStrings:t.sliceStrings,colors:this.colors}}.bind(this)]];this.components=new Map(e.map(function(t){var e=getComponent.apply(void 0,_toConsumableArray$2(t));return [t[0],e]}));}},{key:"calTranslateByAngle",value:function(t){var e=this.radius,n=this.hoverRadio,i=getPositionByAngle(t.startAngle+t.angle/2,e);return "translate3d("+i.x*n+"px,"+i.y*n+"px,0)"}},{key:"hoverSlice",value:function(t,e,n,i){if(t){var a=this.colors[e];if(n){transform(t,this.calTranslateByAngle(this.state.slicesProperties[e])),t.style.fill=lightenDarkenColor(a,50);var r=getOffset(this.svg),s=i.pageX-r.left+10,o=i.pageY-r.top-10,l=(this.formatted_labels&&this.formatted_labels.length>0?this.formatted_labels[e]:this.state.labels[e])+": ",u=(100*this.state.sliceTotals[e]/this.state.grandTotal).toFixed(1);this.tip.setValues(s,o,{name:l,value:u+"%"}),this.tip.showTip();}else transform(t,"translate3d(0,0,0)"),this.tip.hideTip(),t.style.fill=a;}}},{key:"bindTooltip",value:function(){this.container.addEventListener("mousemove",this.mouseMove),this.container.addEventListener("mouseleave",this.mouseLeave);}},{key:"mouseMove",value:function(t){var e=t.target,n=this.components.get("pieSlices").store,i=this.curActiveSliceIndex,a=this.curActiveSlice;if(n.includes(e)){var r=n.indexOf(e);this.hoverSlice(a,i,!1),this.curActiveSlice=e,this.curActiveSliceIndex=r,this.hoverSlice(e,r,!0,t);}else this.mouseLeave();}},{key:"mouseLeave",value:function(){this.hoverSlice(this.curActiveSlice,this.curActiveSliceIndex,!1);}}]),e}(AggregationChart),_slicedToArray$4=function(){function t(t,e){var n=[],i=!0,a=!1,r=void 0;try{for(var s,o=t[Symbol.iterator]();!(i=(s=o.next()).done)&&(n.push(s.value),!e||n.length!==e);i=!0);}catch(t){a=!0,r=t;}finally{try{!i&&o.return&&o.return();}finally{if(a)throw r}}return n}return function(e,n){if(Array.isArray(e))return e;if(Symbol.iterator in Object(e))return t(e,n);throw new TypeError("Invalid attempt to destructure non-iterable instance")}}(),_createClass$6=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),COL_WIDTH=HEATMAP_SQUARE_SIZE+HEATMAP_GUTTER_SIZE,ROW_HEIGHT=COL_WIDTH,Heatmap=function(t){function e(t,n){_classCallCheck$7(this,e);var i=_possibleConstructorReturn$3(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n));i.type="heatmap",i.countLabel=n.countLabel||"";var a=["Sunday","Monday"],r=a.includes(n.startSubDomain)?n.startSubDomain:"Sunday";return i.startSubDomainIndex=a.indexOf(r),i.setup(),i}return _inherits$3(e,t),_createClass$6(e,[{key:"setMeasures",value:function(t){var e=this.measures;this.discreteDomains=0===t.discreteDomains?0:1,e.paddings.top=3*ROW_HEIGHT,e.paddings.bottom=0,e.legendHeight=2*ROW_HEIGHT,e.baseHeight=ROW_HEIGHT*NO_OF_DAYS_IN_WEEK+getExtraHeight(e);var n=this.data,i=this.discreteDomains?NO_OF_YEAR_MONTHS:0;this.independentWidth=(getWeeksBetween(n.start,n.end)+i)*COL_WIDTH+getExtraWidth(e);}},{key:"updateWidth",value:function(){var t=this.discreteDomains?NO_OF_YEAR_MONTHS:0,e=this.state.noOfWeeks?this.state.noOfWeeks:52;this.baseWidth=(e+t)*COL_WIDTH+getExtraWidth(this.measures);}},{key:"prepareData",value:function(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.data;if(t.start&&t.end&&t.start>t.end)throw new Error("Start date cannot be greater than end date.");if(t.start||(t.start=new Date,t.start.setFullYear(t.start.getFullYear()-1)),t.end||(t.end=new Date),t.dataPoints=t.dataPoints||{},parseInt(Object.keys(t.dataPoints)[0])>1e5){var e={};Object.keys(t.dataPoints).forEach(function(n){var i=new Date(n*NO_OF_MILLIS);e[getYyyyMmDd(i)]=t.dataPoints[n];}),t.dataPoints=e;}return t}},{key:"calc",value:function(){var t=this.state;t.start=clone(this.data.start),t.end=clone(this.data.end),t.firstWeekStart=clone(t.start),t.noOfWeeks=getWeeksBetween(t.start,t.end),t.distribution=calcDistribution(Object.values(this.data.dataPoints),HEATMAP_DISTRIBUTION_SIZE),t.domainConfigs=this.getDomains();}},{key:"setupComponents",value:function(){var t=this,e=this.state,n=this.discreteDomains?0:1,i=e.domainConfigs.map(function(i,a){return ["heatDomain",{index:i.index,colWidth:COL_WIDTH,rowHeight:ROW_HEIGHT,squareSize:HEATMAP_SQUARE_SIZE,radius:t.rawChartArgs.radius||0,xTranslate:e.domainConfigs.filter(function(t,e){return e<a}).map(function(t){return t.cols.length-n}).reduce(function(t,e){return t+e},0)*COL_WIDTH},function(){return e.domainConfigs[a]}.bind(t)]});this.components=new Map(i.map(function(t,e){var n=getComponent.apply(void 0,_toConsumableArray$3(t));return [t[0]+"-"+e,n]}));var a=0;DAY_NAMES_SHORT.forEach(function(e,n){if([1,3,5].includes(n)){var i=makeText("subdomain-name",-COL_WIDTH/2,a,e,{fontSize:HEATMAP_SQUARE_SIZE,dy:8,textAnchor:"end"});t.drawArea.appendChild(i);}a+=ROW_HEIGHT;});}},{key:"update",value:function(t){t||console.error("No data to update."),this.data=this.prepareData(t),this.draw(),this.bindTooltip();}},{key:"bindTooltip",value:function(){var t=this;this.container.addEventListener("mousemove",function(e){t.components.forEach(function(n){var i=n.store,a=e.target;if(i.includes(a)){var r=a.getAttribute("data-value"),s=a.getAttribute("data-date").split("-"),o=getMonthName(parseInt(s[1])-1,!0),l=t.container.getBoundingClientRect(),u=a.getBoundingClientRect(),c=parseInt(e.target.getAttribute("width")),h=u.left-l.left+c/2,d=u.top-l.top,f=r+" "+t.countLabel,p=" on "+o+" "+s[0]+", "+s[2];t.tip.setValues(h,d,{name:p,value:f,valueFirst:1},[]),t.tip.showTip();}});});}},{key:"renderLegend",value:function(){var t=this;this.legendArea.textContent="";var e=0,n=ROW_HEIGHT,i=this.rawChartArgs.radius||0,a=makeText("subdomain-name",e,n,"Less",{fontSize:HEATMAP_SQUARE_SIZE+1,dy:9});e=2*COL_WIDTH+COL_WIDTH/2,this.legendArea.appendChild(a),this.colors.slice(0,HEATMAP_DISTRIBUTION_SIZE).map(function(a,r){var s=heatSquare("heatmap-legend-unit",e+(COL_WIDTH+3)*r,n,HEATMAP_SQUARE_SIZE,i,a);t.legendArea.appendChild(s);});var r=makeText("subdomain-name",e+HEATMAP_DISTRIBUTION_SIZE*(COL_WIDTH+3)+COL_WIDTH/4,n,"More",{fontSize:HEATMAP_SQUARE_SIZE+1,dy:9});this.legendArea.appendChild(r);}},{key:"getDomains",value:function(){for(var t=this.state,e=[t.start.getMonth(),t.start.getFullYear()],n=e[0],i=e[1],a=[t.end.getMonth(),t.end.getFullYear()],r=a[0]-n+1+12*(a[1]-i),s=[],o=clone(t.start),l=0;l<r;l++){var u=t.end;if(!areInSameMonth(o,t.end)){var c=[o.getMonth(),o.getFullYear()];u=getLastDateInMonth(c[0],c[1]);}s.push(this.getDomainConfig(o,u)),addDays(u,1),o=u;}return s}},{key:"getDomainConfig",value:function(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:"",n=[t.getMonth(),t.getFullYear()],i=n[0],a=n[1],r=setDayToSunday(t),s={index:i,cols:[]};addDays(e=clone(e)||getLastDateInMonth(i,a),1);for(var o=getWeeksBetween(r,e),l=[],u=void 0,c=0;c<o;c++)u=this.getCol(r,i),l.push(u),addDays(r=new Date(u[NO_OF_DAYS_IN_WEEK-1].yyyyMmDd),1);return void 0!==u[NO_OF_DAYS_IN_WEEK-1].dataValue&&(addDays(r,1),l.push(this.getCol(r,i,!0))),s.cols=l,s}},{key:"getCol",value:function(t,e){for(var n=arguments.length>2&&void 0!==arguments[2]&&arguments[2],i=this.state,a=clone(t),r=[],s=0;s<NO_OF_DAYS_IN_WEEK;s++,addDays(a,1)){var o={},l=a>=i.start&&a<=i.end;n||a.getMonth()!==e||!l?o.yyyyMmDd=getYyyyMmDd(a):o=this.getSubDomainConfig(a),r.push(o);}return r}},{key:"getSubDomainConfig",value:function(t){var e=getYyyyMmDd(t),n=this.data.dataPoints[e];return {yyyyMmDd:e,dataValue:n||0,fill:this.colors[getMaxCheckpoint(n,this.state.distribution)]}}}]),e}(BaseChart),_createClass$7=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),_get$3=function t(e,n,i){null===e&&(e=Function.prototype);var a=Object.getOwnPropertyDescriptor(e,n);if(void 0===a){var r=Object.getPrototypeOf(e);return null===r?void 0:t(r,n,i)}if("value"in a)return a.value;var s=a.get;if(void 0!==s)return s.call(i)},AxisChart=function(t){function e(t,n){_classCallCheck$8(this,e);var i=_possibleConstructorReturn$4(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n));return i.barOptions=n.barOptions||{},i.lineOptions=n.lineOptions||{},i.type=n.type||"line",i.init=1,i.setup(),i}return _inherits$4(e,t),_createClass$7(e,[{key:"setMeasures",value:function(){this.data.datasets.length<=1&&(this.config.showLegend=0,this.measures.paddings.bottom=30);}},{key:"configure",value:function(t){_get$3(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"configure",this).call(this,t),t.axisOptions=t.axisOptions||{},t.tooltipOptions=t.tooltipOptions||{},this.config.xAxisMode=t.axisOptions.xAxisMode||"span",this.config.yAxisMode=t.axisOptions.yAxisMode||"span",this.config.xIsSeries=t.axisOptions.xIsSeries||0,this.config.shortenYAxisNumbers=t.axisOptions.shortenYAxisNumbers||0,this.config.formatTooltipX=t.tooltipOptions.formatTooltipX,this.config.formatTooltipY=t.tooltipOptions.formatTooltipY,this.config.valuesOverPoints=t.valuesOverPoints;}},{key:"prepareData",value:function(){return dataPrep(arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.data,this.type)}},{key:"prepareFirstData",value:function(){return zeroDataPrep(arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.data)}},{key:"calc",value:function(){var t=arguments.length>0&&void 0!==arguments[0]&&arguments[0];this.calcXPositions(),t||this.calcYAxisParameters(this.getAllYValues(),"line"===this.type),this.makeDataByIndex();}},{key:"calcXPositions",value:function(){var t=this.state,e=this.data.labels;t.datasetLength=e.length,t.unitWidth=this.width/t.datasetLength,t.xOffset=t.unitWidth/2,t.xAxis={labels:e,positions:e.map(function(e,n){return floatTwo(t.xOffset+n*t.unitWidth)})};}},{key:"calcYAxisParameters",value:function(t){var e=calcChartIntervals(t,arguments.length>1&&void 0!==arguments[1]?arguments[1]:"false"),n=this.height/getValueRange(e),i=getIntervalSize(e)*n,a=this.height-getZeroIndex(e)*i;this.state.yAxis={labels:e,positions:e.map(function(t){return a-t*n}),scaleMultiplier:n,zeroLine:a},this.calcDatasetPoints(),this.calcYExtremes(),this.calcYRegions();}},{key:"calcDatasetPoints",value:function(){var t=this.state,e=function(e){return e.map(function(e){return scale(e,t.yAxis)})};t.datasets=this.data.datasets.map(function(t,n){var i=t.values,a=t.cumulativeYs||[];return {name:t.name,index:n,chartType:t.chartType,values:i,yPositions:e(i),cumulativeYs:a,cumulativeYPos:e(a)}});}},{key:"calcYExtremes",value:function(){var t=this.state;if(this.barOptions.stacked)return void(t.yExtremes=t.datasets[t.datasets.length-1].cumulativeYPos);t.yExtremes=new Array(t.datasetLength).fill(9999),t.datasets.map(function(e){e.yPositions.map(function(e,n){e<t.yExtremes[n]&&(t.yExtremes[n]=e);});});}},{key:"calcYRegions",value:function(){var t=this.state;this.data.yMarkers&&(this.state.yMarkers=this.data.yMarkers.map(function(e){return e.position=scale(e.value,t.yAxis),e.options||(e.options={}),e})),this.data.yRegions&&(this.state.yRegions=this.data.yRegions.map(function(e){return e.startPos=scale(e.start,t.yAxis),e.endPos=scale(e.end,t.yAxis),e.options||(e.options={}),e}));}},{key:"getAllYValues",value:function(){var t,e=this,n="values";if(this.barOptions.stacked){n="cumulativeYs";var i=new Array(this.state.datasetLength).fill(0);this.data.datasets.map(function(t,a){var r=e.data.datasets[a].values;t[n]=i=i.map(function(t,e){return t+r[e]});});}var a=this.data.datasets.map(function(t){return t[n]});return this.data.yMarkers&&a.push(this.data.yMarkers.map(function(t){return t.value})),this.data.yRegions&&this.data.yRegions.map(function(t){a.push([t.end,t.start]);}),(t=[]).concat.apply(t,_toConsumableArray$5(a))}},{key:"setupComponents",value:function(){var t=this,e=[["yAxis",{mode:this.config.yAxisMode,width:this.width,shortenNumbers:this.config.shortenYAxisNumbers},function(){return this.state.yAxis}.bind(this)],["xAxis",{mode:this.config.xAxisMode,height:this.height},function(){var t=this.state;return t.xAxis.calcLabels=getShortenedLabels(this.width,t.xAxis.labels,this.config.xIsSeries),t.xAxis}.bind(this)],["yRegions",{width:this.width,pos:"right"},function(){return this.state.yRegions}.bind(this)]],n=this.state.datasets.filter(function(t){return "bar"===t.chartType}),i=this.state.datasets.filter(function(t){return "line"===t.chartType}),a=n.map(function(e){var i=e.index;return ["barGraph-"+e.index,{index:i,color:t.colors[i],stacked:t.barOptions.stacked,valuesOverPoints:t.config.valuesOverPoints,minHeight:t.height*MIN_BAR_PERCENT_HEIGHT},function(){var t=this.state,e=t.datasets[i],a=this.barOptions.stacked,r=this.barOptions.spaceRatio||BAR_CHART_SPACE_RATIO,s=t.unitWidth*(1-r),o=s/(a?1:n.length),l=t.xAxis.positions.map(function(t){return t-s/2});a||(l=l.map(function(t){return t+o*i}));var u=new Array(t.datasetLength).fill("");this.config.valuesOverPoints&&(u=a&&e.index===t.datasets.length-1?e.cumulativeYs:e.values);var c=new Array(t.datasetLength).fill(0);return a&&(c=e.yPositions.map(function(t,n){return t-e.cumulativeYPos[n]})),{xPositions:l,yPositions:e.yPositions,offsets:c,labels:u,zeroLine:t.yAxis.zeroLine,barsWidth:s,barWidth:o}}.bind(t)]}),r=i.map(function(e){var n=e.index;return ["lineGraph-"+e.index,{index:n,color:t.colors[n],svgDefs:t.svgDefs,heatline:t.lineOptions.heatline,regionFill:t.lineOptions.regionFill,spline:t.lineOptions.spline,hideDots:t.lineOptions.hideDots,hideLine:t.lineOptions.hideLine,valuesOverPoints:t.config.valuesOverPoints},function(){var t=this.state,e=t.datasets[n],i=t.yAxis.positions[0]<t.yAxis.zeroLine?t.yAxis.positions[0]:t.yAxis.zeroLine;return {xPositions:t.xAxis.positions,yPositions:e.yPositions,values:e.values,zeroLine:i,radius:this.lineOptions.dotSize||LINE_CHART_DOT_SIZE}}.bind(t)]}),s=[["yMarkers",{width:this.width,pos:"right"},function(){return this.state.yMarkers}.bind(this)]];e=e.concat(a,r,s);var o=["yMarkers","yRegions"];this.dataUnitComponents=[],this.components=new Map(e.filter(function(e){return !o.includes(e[0])||t.state[e[0]]}).map(function(e){var n=getComponent.apply(void 0,_toConsumableArray$5(e));return (e[0].includes("lineGraph")||e[0].includes("barGraph"))&&t.dataUnitComponents.push(n),[e[0],n]}));}},{key:"makeDataByIndex",value:function(){var t=this;this.dataByIndex={};var e=this.state,n=this.config.formatTooltipX,i=this.config.formatTooltipY;e.xAxis.labels.map(function(a,r){var s=t.state.datasets.map(function(e,n){var a=e.values[r];return {title:e.name,value:a,yPos:e.yPositions[r],color:t.colors[n],formatted:i?i(a):a}});t.dataByIndex[r]={label:a,formattedLabel:n?n(a):a,xPos:e.xAxis.positions[r],values:s,yExtreme:e.yExtremes[r]};});}},{key:"bindTooltip",value:function(){var t=this;this.container.addEventListener("mousemove",function(e){var n=t.measures,i=getOffset(t.container),a=e.pageX-i.left-getLeftOffset(n),r=e.pageY-i.top;r<t.height+getTopOffset(n)&&r>getTopOffset(n)?t.mapTooltipXPosition(a):t.tip.hideTip();});}},{key:"mapTooltipXPosition",value:function(t){var e=this.state;if(e.yExtremes){var n=getClosestInArray(t,e.xAxis.positions,!0);if(n>=0){var i=this.dataByIndex[n];this.tip.setValues(i.xPos+this.tip.offset.x,i.yExtreme+this.tip.offset.y,{name:i.formattedLabel,value:""},i.values,n),this.tip.showTip();}}}},{key:"renderLegend",value:function(){var t=this,e=this.data;e.datasets.length>1&&(this.legendArea.textContent="",e.datasets.map(function(e,n){var i=AXIS_LEGEND_BAR_SIZE,a=legendBar(i*n,"0",i,t.colors[n],e.name,t.config.truncateLegends);t.legendArea.appendChild(a);}));}},{key:"makeOverlay",value:function(){var t=this;if(this.init)return void(this.init=0);this.overlayGuides&&this.overlayGuides.forEach(function(t){var e=t.overlay;e.parentNode.removeChild(e);}),this.overlayGuides=this.dataUnitComponents.map(function(t){return {type:t.unitType,overlay:void 0,units:t.units}}),void 0===this.state.currentIndex&&(this.state.currentIndex=this.state.datasetLength-1),this.overlayGuides.map(function(e){var n=e.units[t.state.currentIndex];e.overlay=makeOverlay[e.type](n),t.drawArea.appendChild(e.overlay);});}},{key:"updateOverlayGuides",value:function(){this.overlayGuides&&this.overlayGuides.forEach(function(t){var e=t.overlay;e.parentNode.removeChild(e);});}},{key:"bindOverlay",value:function(){var t=this;this.parent.addEventListener("data-select",function(){t.updateOverlay();});}},{key:"bindUnits",value:function(){var t=this;this.dataUnitComponents.map(function(e){e.units.map(function(e){e.addEventListener("click",function(){var n=e.getAttribute("data-point-index");t.setCurrentDataPoint(n);});});}),this.tip.container.addEventListener("click",function(){var e=t.tip.container.getAttribute("data-point-index");t.setCurrentDataPoint(e);});}},{key:"updateOverlay",value:function(){var t=this;this.overlayGuides.map(function(e){var n=e.units[t.state.currentIndex];updateOverlay[e.type](n,e.overlay);});}},{key:"onLeftArrow",value:function(){this.setCurrentDataPoint(this.state.currentIndex-1);}},{key:"onRightArrow",value:function(){this.setCurrentDataPoint(this.state.currentIndex+1);}},{key:"getDataPoint",value:function(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.state.currentIndex,e=this.state;return {index:t,label:e.xAxis.labels[t],values:e.datasets.map(function(e){return e.values[t]})}}},{key:"setCurrentDataPoint",value:function(t){var e=this.state;(t=parseInt(t))<0&&(t=0),t>=e.xAxis.labels.length&&(t=e.xAxis.labels.length-1),t!==e.currentIndex&&(e.currentIndex=t,fire(this.parent,"data-select",this.getDataPoint()));}},{key:"addDataPoint",value:function(t,n){var i=arguments.length>2&&void 0!==arguments[2]?arguments[2]:this.state.datasetLength;_get$3(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"addDataPoint",this).call(this,t,n,i),this.data.labels.splice(i,0,t),this.data.datasets.map(function(t,e){t.values.splice(i,0,n[e]);}),this.update(this.data);}},{key:"removeDataPoint",value:function(){var t=arguments.length>0&&void 0!==arguments[0]?arguments[0]:this.state.datasetLength-1;this.data.labels.length<=1||(_get$3(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"removeDataPoint",this).call(this,t),this.data.labels.splice(t,1),this.data.datasets.map(function(e){e.values.splice(t,1);}),this.update(this.data));}},{key:"updateDataset",value:function(t){var e=arguments.length>1&&void 0!==arguments[1]?arguments[1]:0;this.data.datasets[e].values=t,this.update(this.data);}},{key:"updateDatasets",value:function(t){this.data.datasets.map(function(e,n){t[n]&&(e.values=t[n]);}),this.update(this.data);}}]),e}(BaseChart),_createClass$8=function(){function t(t,e){for(var n=0;n<e.length;n++){var i=e[n];i.enumerable=i.enumerable||!1,i.configurable=!0,"value"in i&&(i.writable=!0),Object.defineProperty(t,i.key,i);}}return function(e,n,i){return n&&t(e.prototype,n),i&&t(e,i),e}}(),_get$4=function t(e,n,i){null===e&&(e=Function.prototype);var a=Object.getOwnPropertyDescriptor(e,n);if(void 0===a){var r=Object.getPrototypeOf(e);return null===r?void 0:t(r,n,i)}if("value"in a)return a.value;var s=a.get;if(void 0!==s)return s.call(i)},DonutChart=function(t){function e(t,n){_classCallCheck$9(this,e);var i=_possibleConstructorReturn$5(this,(e.__proto__||Object.getPrototypeOf(e)).call(this,t,n));return i.type="donut",i.initTimeout=0,i.init=1,i.setup(),i}return _inherits$5(e,t),_createClass$8(e,[{key:"configure",value:function(t){_get$4(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"configure",this).call(this,t),this.mouseMove=this.mouseMove.bind(this),this.mouseLeave=this.mouseLeave.bind(this),this.hoverRadio=t.hoverRadio||.1,this.config.startAngle=t.startAngle||0,this.clockWise=t.clockWise||!1,this.strokeWidth=t.strokeWidth||30;}},{key:"calc",value:function(){var t=this;_get$4(e.prototype.__proto__||Object.getPrototypeOf(e.prototype),"calc",this).call(this);var n=this.state;this.radius=this.height>this.width?this.center.x-this.strokeWidth/2:this.center.y-this.strokeWidth/2;var i=this.radius,a=this.clockWise,r=n.slicesProperties||[];n.sliceStrings=[],n.slicesProperties=[];var s=180-this.config.startAngle;n.sliceTotals.map(function(e,o){var l=s,u=e/n.grandTotal*FULL_ANGLE,c=u>180?1:0,h=a?-u:u,d=s+=h,f=getPositionByAngle(l,i),p=getPositionByAngle(d,i),v=t.init&&r[o],g=void 0,y=void 0;t.init?(g=v?v.startPosition:f,y=v?v.endPosition:f):(g=f,y=p);var m=360===u?makeStrokeCircleStr(g,y,t.center,t.radius,t.clockWise,c):makeArcStrokePathStr(g,y,t.center,t.radius,t.clockWise,c);n.sliceStrings.push(m),n.slicesProperties.push({startPosition:f,endPosition:p,value:e,total:n.grandTotal,startAngle:l,endAngle:d,angle:h});}),this.init=0;}},{key:"setupComponents",value:function(){var t=this.state,e=[["donutSlices",{},function(){return {sliceStrings:t.sliceStrings,colors:this.colors,strokeWidth:this.strokeWidth}}.bind(this)]];this.components=new Map(e.map(function(t){var e=getComponent.apply(void 0,_toConsumableArray$7(t));return [t[0],e]}));}},{key:"calTranslateByAngle",value:function(t){var e=this.radius,n=this.hoverRadio,i=getPositionByAngle(t.startAngle+t.angle/2,e);return "translate3d("+i.x*n+"px,"+i.y*n+"px,0)"}},{key:"hoverSlice",value:function(t,e,n,i){if(t){var a=this.colors[e];if(n){transform(t,this.calTranslateByAngle(this.state.slicesProperties[e])),t.style.stroke=lightenDarkenColor(a,50);var r=getOffset(this.svg),s=i.pageX-r.left+10,o=i.pageY-r.top-10,l=(this.formatted_labels&&this.formatted_labels.length>0?this.formatted_labels[e]:this.state.labels[e])+": ",u=(100*this.state.sliceTotals[e]/this.state.grandTotal).toFixed(1);this.tip.setValues(s,o,{name:l,value:u+"%"}),this.tip.showTip();}else transform(t,"translate3d(0,0,0)"),this.tip.hideTip(),t.style.stroke=a;}}},{key:"bindTooltip",value:function(){this.container.addEventListener("mousemove",this.mouseMove),this.container.addEventListener("mouseleave",this.mouseLeave);}},{key:"mouseMove",value:function(t){var e=t.target,n=this.components.get("donutSlices").store,i=this.curActiveSliceIndex,a=this.curActiveSlice;if(n.includes(e)){var r=n.indexOf(e);this.hoverSlice(a,i,!1),this.curActiveSlice=e,this.curActiveSliceIndex=r,this.hoverSlice(e,r,!0,t);}else this.mouseLeave();}},{key:"mouseLeave",value:function(){this.hoverSlice(this.curActiveSlice,this.curActiveSliceIndex,!1);}}]),e}(AggregationChart),chartTypes={bar:AxisChart,line:AxisChart,percentage:PercentageChart,heatmap:Heatmap,pie:PieChart,donut:DonutChart},Chart=function t(e,n){return _classCallCheck(this,t),getChartByType(n.type,e,n)};exports.Chart=Chart,exports.PercentageChart=PercentageChart,exports.PieChart=PieChart,exports.Heatmap=Heatmap,exports.AxisChart=AxisChart;
 
     });
 
-    /* home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/svelte-frappe-charts/src/components/base.svelte generated by Svelte v3.24.1 */
-    const file$g = "home/cbiale/Escritorio/especializacion/dapIOT_tp_final/node_modules/svelte-frappe-charts/src/components/base.svelte";
+    /* node_modules/svelte-frappe-charts/src/components/base.svelte generated by Svelte v3.29.0 */
+    const file$d = "node_modules/svelte-frappe-charts/src/components/base.svelte";
 
-    function create_fragment$j(ctx) {
+    function create_fragment$g(ctx) {
     	let div;
 
     	const block = {
     		c: function create() {
     			div = element("div");
-    			add_location(div, file$g, 84, 0, 1983);
+    			add_location(div, file$d, 84, 0, 1983);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -12817,7 +17672,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$j.name,
+    		id: create_fragment$g.name,
     		type: "component",
     		source: "",
     		ctx
@@ -12826,7 +17681,10 @@ var app = (function (L) {
     	return block;
     }
 
-    function instance$j($$self, $$props, $$invalidate) {
+    function instance$g($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Base", slots, []);
+
     	let { data = {
     		labels: [],
     		datasets: [{ values: [] }],
@@ -12912,9 +17770,6 @@ var app = (function (L) {
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Base> was created with unknown prop '${key}'`);
     	});
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Base", $$slots, []);
 
     	function div_binding($$value) {
     		binding_callbacks[$$value ? "unshift" : "push"](() => {
@@ -13005,7 +17860,7 @@ var app = (function (L) {
     	constructor(options) {
     		super(options);
 
-    		init(this, options, instance$j, create_fragment$j, safe_not_equal, {
+    		init(this, options, instance$g, create_fragment$g, safe_not_equal, {
     			data: 1,
     			type: 2,
     			height: 3,
@@ -13026,7 +17881,7 @@ var app = (function (L) {
     			component: this,
     			tagName: "Base",
     			options,
-    			id: create_fragment$j.name
+    			id: create_fragment$g.name
     		});
     	}
 
@@ -13143,10 +17998,10 @@ var app = (function (L) {
     	}
     }
 
-    /* src/componentes/Dashboard.svelte generated by Svelte v3.24.1 */
+    /* src/componentes/Dashboard.svelte generated by Svelte v3.29.0 */
 
     const { console: console_1$1 } = globals;
-    const file$h = "src/componentes/Dashboard.svelte";
+    const file$e = "src/componentes/Dashboard.svelte";
 
     // (80:8) <Label>
     function create_default_slot_5$1(ctx) {
@@ -13176,7 +18031,7 @@ var app = (function (L) {
     }
 
     // (79:4) <Button on:click={exportar} variant="outlined">
-    function create_default_slot_4$2(ctx) {
+    function create_default_slot_4$3(ctx) {
     	let label;
     	let current;
 
@@ -13221,7 +18076,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_4$2.name,
+    		id: create_default_slot_4$3.name,
     		type: "slot",
     		source: "(79:4) <Button on:click={exportar} variant=\\\"outlined\\\">",
     		ctx
@@ -13231,7 +18086,7 @@ var app = (function (L) {
     }
 
     // (84:12) <Label>
-    function create_default_slot_3$2(ctx) {
+    function create_default_slot_3$3(ctx) {
     	let t;
 
     	const block = {
@@ -13248,7 +18103,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_3$2.name,
+    		id: create_default_slot_3$3.name,
     		type: "slot",
     		source: "(84:12) <Label>",
     		ctx
@@ -13258,13 +18113,13 @@ var app = (function (L) {
     }
 
     // (83:8) <Button variant="outlined">
-    function create_default_slot_2$2(ctx) {
+    function create_default_slot_2$3(ctx) {
     	let label;
     	let current;
 
     	label = new Label({
     			props: {
-    				$$slots: { default: [create_default_slot_3$2] },
+    				$$slots: { default: [create_default_slot_3$3] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13303,7 +18158,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_2$2.name,
+    		id: create_default_slot_2$3.name,
     		type: "slot",
     		source: "(83:8) <Button variant=\\\"outlined\\\">",
     		ctx
@@ -13313,7 +18168,7 @@ var app = (function (L) {
     }
 
     // (89:12) <Label>
-    function create_default_slot_1$2(ctx) {
+    function create_default_slot_1$3(ctx) {
     	let t;
 
     	const block = {
@@ -13330,7 +18185,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_1$2.name,
+    		id: create_default_slot_1$3.name,
     		type: "slot",
     		source: "(89:12) <Label>",
     		ctx
@@ -13340,13 +18195,13 @@ var app = (function (L) {
     }
 
     // (88:8) <Button variant="outlined">
-    function create_default_slot$3(ctx) {
+    function create_default_slot$4(ctx) {
     	let label;
     	let current;
 
     	label = new Label({
     			props: {
-    				$$slots: { default: [create_default_slot_1$2] },
+    				$$slots: { default: [create_default_slot_1$3] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13385,7 +18240,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$3.name,
+    		id: create_default_slot$4.name,
     		type: "slot",
     		source: "(88:8) <Button variant=\\\"outlined\\\">",
     		ctx
@@ -13394,7 +18249,7 @@ var app = (function (L) {
     	return block;
     }
 
-    function create_fragment$k(ctx) {
+    function create_fragment$h(ctx) {
     	let main;
     	let h2;
     	let t0;
@@ -13417,7 +18272,7 @@ var app = (function (L) {
     	button0 = new Button_1({
     			props: {
     				variant: "outlined",
-    				$$slots: { default: [create_default_slot_4$2] },
+    				$$slots: { default: [create_default_slot_4$3] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13428,7 +18283,7 @@ var app = (function (L) {
     	button1 = new Button_1({
     			props: {
     				variant: "outlined",
-    				$$slots: { default: [create_default_slot_2$2] },
+    				$$slots: { default: [create_default_slot_2$3] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13437,7 +18292,7 @@ var app = (function (L) {
     	button2 = new Button_1({
     			props: {
     				variant: "outlined",
-    				$$slots: { default: [create_default_slot$3] },
+    				$$slots: { default: [create_default_slot$4] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13460,12 +18315,12 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button2.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$h, 76, 4, 2014);
+    			add_location(h2, file$e, 76, 4, 2014);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$h, 81, 4, 2198);
+    			add_location(a0, file$e, 81, 4, 2198);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$h, 86, 4, 2310);
-    			add_location(main, file$h, 75, 0, 2003);
+    			add_location(a1, file$e, 86, 4, 2310);
+    			add_location(main, file$e, 75, 0, 2003);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -13540,7 +18395,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$k.name,
+    		id: create_fragment$h.name,
     		type: "component",
     		source: "",
     		ctx
@@ -13549,7 +18404,9 @@ var app = (function (L) {
     	return block;
     }
 
-    function instance$k($$self, $$props, $$invalidate) {
+    function instance$h($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Dashboard", slots, []);
     	let { id } = $$props;
 
     	// datos obtenidos del backend
@@ -13601,9 +18458,6 @@ var app = (function (L) {
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1$1.warn(`<Dashboard> was created with unknown prop '${key}'`);
     	});
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Dashboard", $$slots, []);
 
     	function chart_binding($$value) {
     		binding_callbacks[$$value ? "unshift" : "push"](() => {
@@ -13657,13 +18511,13 @@ var app = (function (L) {
     class Dashboard extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$k, create_fragment$k, safe_not_equal, { id: 0 });
+    		init(this, options, instance$h, create_fragment$h, safe_not_equal, { id: 0 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Dashboard",
     			options,
-    			id: create_fragment$k.name
+    			id: create_fragment$h.name
     		});
 
     		const { ctx } = this.$$;
@@ -13683,13 +18537,13 @@ var app = (function (L) {
     	}
     }
 
-    /* src/componentes/Mapa.svelte generated by Svelte v3.24.1 */
+    /* src/componentes/Mapa.svelte generated by Svelte v3.29.0 */
 
     const { console: console_1$2 } = globals;
-    const file$i = "src/componentes/Mapa.svelte";
+    const file$f = "src/componentes/Mapa.svelte";
 
     // (90:12) <Label>
-    function create_default_slot_3$3(ctx) {
+    function create_default_slot_3$4(ctx) {
     	let t;
 
     	const block = {
@@ -13706,7 +18560,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_3$3.name,
+    		id: create_default_slot_3$4.name,
     		type: "slot",
     		source: "(90:12) <Label>",
     		ctx
@@ -13716,13 +18570,13 @@ var app = (function (L) {
     }
 
     // (89:8) <Button variant="outlined">
-    function create_default_slot_2$3(ctx) {
+    function create_default_slot_2$4(ctx) {
     	let label;
     	let current;
 
     	label = new Label({
     			props: {
-    				$$slots: { default: [create_default_slot_3$3] },
+    				$$slots: { default: [create_default_slot_3$4] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13761,7 +18615,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_2$3.name,
+    		id: create_default_slot_2$4.name,
     		type: "slot",
     		source: "(89:8) <Button variant=\\\"outlined\\\">",
     		ctx
@@ -13771,7 +18625,7 @@ var app = (function (L) {
     }
 
     // (95:12) <Label>
-    function create_default_slot_1$3(ctx) {
+    function create_default_slot_1$4(ctx) {
     	let t;
 
     	const block = {
@@ -13788,7 +18642,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot_1$3.name,
+    		id: create_default_slot_1$4.name,
     		type: "slot",
     		source: "(95:12) <Label>",
     		ctx
@@ -13798,13 +18652,13 @@ var app = (function (L) {
     }
 
     // (94:8) <Button variant="outlined">
-    function create_default_slot$4(ctx) {
+    function create_default_slot$5(ctx) {
     	let label;
     	let current;
 
     	label = new Label({
     			props: {
-    				$$slots: { default: [create_default_slot_1$3] },
+    				$$slots: { default: [create_default_slot_1$4] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13843,7 +18697,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$4.name,
+    		id: create_default_slot$5.name,
     		type: "slot",
     		source: "(94:8) <Button variant=\\\"outlined\\\">",
     		ctx
@@ -13853,7 +18707,7 @@ var app = (function (L) {
     }
 
     // (99:4) {#if centro && ubicaciones}
-    function create_if_block$7(ctx) {
+    function create_if_block$5(ctx) {
     	let div;
     	let accionesMapa_action;
     	let mounted;
@@ -13865,7 +18719,7 @@ var app = (function (L) {
     			attr_dev(div, "class", "map");
     			set_style(div, "height", "400px");
     			set_style(div, "width", "100%");
-    			add_location(div, file$i, 99, 8, 2939);
+    			add_location(div, file$f, 99, 8, 2939);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -13884,7 +18738,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_if_block$7.name,
+    		id: create_if_block$5.name,
     		type: "if",
     		source: "(99:4) {#if centro && ubicaciones}",
     		ctx
@@ -13893,7 +18747,7 @@ var app = (function (L) {
     	return block;
     }
 
-    function create_fragment$l(ctx) {
+    function create_fragment$i(ctx) {
     	let main;
     	let h2;
     	let t1;
@@ -13908,7 +18762,7 @@ var app = (function (L) {
     	button0 = new Button_1({
     			props: {
     				variant: "outlined",
-    				$$slots: { default: [create_default_slot_2$3] },
+    				$$slots: { default: [create_default_slot_2$4] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -13917,13 +18771,13 @@ var app = (function (L) {
     	button1 = new Button_1({
     			props: {
     				variant: "outlined",
-    				$$slots: { default: [create_default_slot$4] },
+    				$$slots: { default: [create_default_slot$5] },
     				$$scope: { ctx }
     			},
     			$$inline: true
     		});
 
-    	let if_block = /*centro*/ ctx[0] && /*ubicaciones*/ ctx[1] && create_if_block$7(ctx);
+    	let if_block = /*centro*/ ctx[0] && /*ubicaciones*/ ctx[1] && create_if_block$5(ctx);
 
     	const block = {
     		c: function create() {
@@ -13939,12 +18793,12 @@ var app = (function (L) {
     			t3 = space();
     			if (if_block) if_block.c();
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$i, 85, 4, 2593);
+    			add_location(h2, file$f, 85, 4, 2593);
     			attr_dev(a0, "href", "/dispositivos");
-    			add_location(a0, file$i, 87, 4, 2628);
+    			add_location(a0, file$f, 87, 4, 2628);
     			attr_dev(a1, "href", "/dispositivos/nuevo");
-    			add_location(a1, file$i, 92, 4, 2755);
-    			add_location(main, file$i, 84, 0, 2582);
+    			add_location(a1, file$f, 92, 4, 2755);
+    			add_location(main, file$f, 84, 0, 2582);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -13980,7 +18834,7 @@ var app = (function (L) {
 
     			if (/*centro*/ ctx[0] && /*ubicaciones*/ ctx[1]) {
     				if (if_block) ; else {
-    					if_block = create_if_block$7(ctx);
+    					if_block = create_if_block$5(ctx);
     					if_block.c();
     					if_block.m(main, null);
     				}
@@ -14010,7 +18864,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$l.name,
+    		id: create_fragment$i.name,
     		type: "component",
     		source: "",
     		ctx
@@ -14019,7 +18873,9 @@ var app = (function (L) {
     	return block;
     }
 
-    function instance$l($$self, $$props, $$invalidate) {
+    function instance$i($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("Mapa", slots, []);
     	let mapa;
 
     	// variable de dispositivos (para mostrar en el mapa)
@@ -14088,9 +18944,6 @@ var app = (function (L) {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1$2.warn(`<Mapa> was created with unknown prop '${key}'`);
     	});
 
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("Mapa", $$slots, []);
-
     	$$self.$capture_state = () => ({
     		L: L__namespace,
     		onMount,
@@ -14124,22 +18977,22 @@ var app = (function (L) {
     class Mapa extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$l, create_fragment$l, safe_not_equal, {});
+    		init(this, options, instance$i, create_fragment$i, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Mapa",
     			options,
-    			id: create_fragment$l.name
+    			id: create_fragment$i.name
     		});
     	}
     }
 
-    /* src/App.svelte generated by Svelte v3.24.1 */
-    const file$j = "src/App.svelte";
+    /* src/App.svelte generated by Svelte v3.29.0 */
+    const file$g = "src/App.svelte";
 
-    // (20:2) <Ruteador>
-    function create_default_slot$5(ctx) {
+    // (21:2) <Ruteador>
+    function create_default_slot$6(ctx) {
     	let ruta0;
     	let t0;
     	let ruta1;
@@ -14149,6 +19002,8 @@ var app = (function (L) {
     	let ruta3;
     	let t3;
     	let ruta4;
+    	let t4;
+    	let ruta5;
     	let current;
 
     	ruta0 = new Ruta({
@@ -14166,13 +19021,21 @@ var app = (function (L) {
 
     	ruta2 = new Ruta({
     			props: {
+    				path: "/dispositivos/nuevo",
+    				componente: NuevoDispositivo
+    			},
+    			$$inline: true
+    		});
+
+    	ruta3 = new Ruta({
+    			props: {
     				path: "/dispositivos/:id",
     				componente: Dispositivo
     			},
     			$$inline: true
     		});
 
-    	ruta3 = new Ruta({
+    	ruta4 = new Ruta({
     			props: {
     				path: "/dispositivos/:id/dashboard",
     				componente: Dashboard
@@ -14180,7 +19043,7 @@ var app = (function (L) {
     			$$inline: true
     		});
 
-    	ruta4 = new Ruta({
+    	ruta5 = new Ruta({
     			props: { path: "*", componente: NoEncontrado },
     			$$inline: true
     		});
@@ -14196,6 +19059,8 @@ var app = (function (L) {
     			create_component(ruta3.$$.fragment);
     			t3 = space();
     			create_component(ruta4.$$.fragment);
+    			t4 = space();
+    			create_component(ruta5.$$.fragment);
     		},
     		m: function mount(target, anchor) {
     			mount_component(ruta0, target, anchor);
@@ -14207,6 +19072,8 @@ var app = (function (L) {
     			mount_component(ruta3, target, anchor);
     			insert_dev(target, t3, anchor);
     			mount_component(ruta4, target, anchor);
+    			insert_dev(target, t4, anchor);
+    			mount_component(ruta5, target, anchor);
     			current = true;
     		},
     		p: noop,
@@ -14217,6 +19084,7 @@ var app = (function (L) {
     			transition_in(ruta2.$$.fragment, local);
     			transition_in(ruta3.$$.fragment, local);
     			transition_in(ruta4.$$.fragment, local);
+    			transition_in(ruta5.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
@@ -14225,6 +19093,7 @@ var app = (function (L) {
     			transition_out(ruta2.$$.fragment, local);
     			transition_out(ruta3.$$.fragment, local);
     			transition_out(ruta4.$$.fragment, local);
+    			transition_out(ruta5.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
@@ -14237,28 +19106,30 @@ var app = (function (L) {
     			destroy_component(ruta3, detaching);
     			if (detaching) detach_dev(t3);
     			destroy_component(ruta4, detaching);
+    			if (detaching) detach_dev(t4);
+    			destroy_component(ruta5, detaching);
     		}
     	};
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_default_slot$5.name,
+    		id: create_default_slot$6.name,
     		type: "slot",
-    		source: "(20:2) <Ruteador>",
+    		source: "(21:2) <Ruteador>",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$m(ctx) {
+    function create_fragment$j(ctx) {
     	let main;
     	let ruteador;
     	let current;
 
     	ruteador = new Ruteador({
     			props: {
-    				$$slots: { default: [create_default_slot$5] },
+    				$$slots: { default: [create_default_slot$6] },
     				$$scope: { ctx }
     			},
     			$$inline: true
@@ -14268,7 +19139,7 @@ var app = (function (L) {
     		c: function create() {
     			main = element("main");
     			create_component(ruteador.$$.fragment);
-    			add_location(main, file$j, 17, 0, 491);
+    			add_location(main, file$g, 18, 0, 563);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -14304,7 +19175,7 @@ var app = (function (L) {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$m.name,
+    		id: create_fragment$j.name,
     		type: "component",
     		source: "",
     		ctx
@@ -14313,15 +19184,14 @@ var app = (function (L) {
     	return block;
     }
 
-    function instance$m($$self, $$props, $$invalidate) {
+    function instance$j($$self, $$props, $$invalidate) {
+    	let { $$slots: slots = {}, $$scope } = $$props;
+    	validate_slots("App", slots, []);
     	const writable_props = [];
 
     	Object.keys($$props).forEach(key => {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<App> was created with unknown prop '${key}'`);
     	});
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("App", $$slots, []);
 
     	$$self.$capture_state = () => ({
     		Ruteador,
@@ -14329,6 +19199,7 @@ var app = (function (L) {
     		NoEncontrado,
     		ListadoDispositivos,
     		Dispositivo,
+    		NuevoDispositivo,
     		Dashboard,
     		Mapa
     	});
@@ -14339,13 +19210,13 @@ var app = (function (L) {
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$m, create_fragment$m, safe_not_equal, {});
+    		init(this, options, instance$j, create_fragment$j, safe_not_equal, {});
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "App",
     			options,
-    			id: create_fragment$m.name
+    			id: create_fragment$j.name
     		});
     	}
     }

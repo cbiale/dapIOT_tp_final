@@ -7,6 +7,7 @@
   // importamos componentes
   import ListadoDispositivos from "./componentes/ListadoDispositivos.svelte";
   import Dispositivo from "./componentes/Dispositivo.svelte";
+  import NuevoDispositivo from "./componentes/NuevoDispositivo.svelte";
   import Dashboard from "./componentes/Dashboard.svelte";
   import Mapa from "./componentes/Mapa.svelte";
 </script>
@@ -20,6 +21,7 @@
   <Ruteador>
     <Ruta path="/" componente={Mapa} />
     <Ruta path="/dispositivos" componente={ListadoDispositivos} />
+    <Ruta path="/dispositivos/nuevo" componente={NuevoDispositivo} />
     <Ruta path="/dispositivos/:id" componente={Dispositivo} let:parametros />
     <Ruta path="/dispositivos/:id/dashboard" componente={Dashboard} let:parametros />    
     <Ruta path= "*" componente= {NoEncontrado} />

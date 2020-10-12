@@ -25,7 +25,7 @@ async function obtenerDispositivo(id) {
 
 async function agregarDispositivo(datos) {
     let respuesta = await fetch(BASE_URL, {
-        method: 'POST',
+        method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(datos)
     })
@@ -46,16 +46,19 @@ async function eliminarDispositivo(id) {
 }
 
 
-async function modificarDispositivo (datos) {
-    let respuesta = await fetch(BASE_URL, {
-        method: 'POST',
+async function modificarDispositivo (id, datos) {
+    console.log(datos + id);
+    let respuesta = await fetch(`${BASE_URL}/${id}`, {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(datos)
     })
+    console.log(respuesta);
 
     if (respuesta.status !== 200) {
         throw new Error(`Estado HTTP ${respuesta.status}`);
     }
+    
 }
 
 

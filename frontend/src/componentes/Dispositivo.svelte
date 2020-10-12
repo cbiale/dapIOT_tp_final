@@ -1,11 +1,14 @@
 <script>
+    // validar formulario, basado en: https://codechips.me/svelte-form-validation-with-yup/
+
     import { onMount } from "svelte";
     import Button, { Label, Icon } from "@smui/button/bare.js";
     import "@smui/button/bare.css";
-    import { Form, Input, Select, Choice } from "sveltejs-forms";
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
     import { seriesServicio } from "../servicios/series.servicio";
+
+    import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
 
     // dato pasado al componente
     export let id;
@@ -16,13 +19,19 @@
     let seriesTemperatura;
 
     // datos formulario
-    let valoresFormulario;
+    let valores = {};
+    let errores = {};
 
     onMount(async () => {
         await dispositivosServicio
             .obtenerDispositivo(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (dispositivo = resultado));
+
+        valores.denominacion = dispositivo.denominacion;
+        valores.latitud = dispositivo.ubicacion.coordinates[1];
+        valores.longitud = dispositivo.ubicacion.coordinates[0];
+
         await seriesServicio
             .obtenerDatos(id + "-Humedad")
             .then((respuesta) => respuesta.json())
@@ -39,33 +48,21 @@
         }
     });
 
-    function resetear() {
-        console.log("form has been reset");
-    }
+    const capturarErrores = ({ inner }) => {
+        return inner.reduce((acc, err) => {
+            return { ...acc, [err.path]: err.message };
+        }, {});
+    };
 
-    function guardar({ detail: { values, setSubmitting, resetForm } }) {
-        setTimeout(() => {
-            formValues = values;
-            setSubmitting(false);
-            resetForm();
-        }, 1000);
-    }
-
-    const schema = yup.object().shape({
-        denominacion: yup
-            .string()
-            .required("Debe especificar la denominacion del dispositivo"),
-        latitud: yup
-            .number()
-            .required(
-                "Debe especificar la ubicacion (latitud) del dispositivo"
-            ),
-        longitud: yup
-            .number()
-            .required(
-                "Debe especificar la ubicacion (longitud) del dispositivo"
-            ),
-    });
+    const guardar = () => {
+        dispositivoEsquema
+            .validate(valores, { abortEarly: false })
+            .then(() => {
+                alert(JSON.stringify(valores, null, 2));
+                dispositivosServicio.modificarDispositivo(dispositivo.id, valores);
+            })
+            .catch((err) => (errores = capturarErrores(err)));
+    };
 </script>
 
 <style>
@@ -77,40 +74,56 @@
 </style>
 
 <main>
+    
     <h2>Dispositivo</h2>
+
     {#if dispositivo}
-        <p>{dispositivo.id}</p>
-        <Form
-            {schema}
-            validateOnChange={true}
-            validateOnBlur={true}
-            on:submit={guardar}
-            on:reset={resetear}
-     i       let:isSubmitting>
-            <Input
-                name="denominacion"
-                label="Denominación" />
-
-            <Input
-                name="longitud"
-                label="Longitud" />
-
-            <Input
-                name="latitud"
-                label="Latitud" />
-
-        </Form>
-
-        <p>{dispositivo.denominacion}</p>
-        <a href="/">
-            <Button variant="outlined">
-                <Label>Mapa</Label>
-            </Button>
-        </a>
-        <a href="/dispositivos">
-            <Button variant="outlined">
-                <Label>Listado</Label>
-            </Button>
-        </a>
+        <p> Id <b>{dispositivo.id}</b> </p>    
+        <form on:submit|preventDefault={guardar}>
+            <label for="denominacion">Denominación</label>
+            <div>
+                <input
+                    id="denominacion"
+                    name="denominacion"
+                    type="text"
+                    bind:value={valores.denominacion}
+                    placeholder="denominación del dispositivo" />
+                {#if errores.denominacion}{errores.denominacion}{/if}
+            </div>
+            <label for="latitud">Latitud</label>
+            <div>
+                <input
+                    id="latitud"
+                    name="latitud"
+                    type="text"
+                    bind:value={valores.latitud}
+                    placeholder="latitud del dispositivo" />
+                {#if errores.latitud}{errores.latitud}{/if}
+            </div>
+            <label for="longitud">Longitud</label>
+            <div>
+                <input
+                    id="longitud"
+                    name="longitud"
+                    type="text"
+                    bind:value={valores.longitud}
+                    placeholder="longitud del dispositivo" />
+                {#if errores.longitud}{errores.longitud}{/if}
+            </div>
+            <Button variant="outlined" type="submit">Guardar</Button>
+        </form>
     {/if}
+
+    <hr/>
+    <a href="/">
+        <Button variant="outlined">
+            <Label>Mapa</Label>
+        </Button>
+    </a>
+    <a href="/dispositivos">
+        <Button variant="outlined">
+            <Label>Listado</Label>
+        </Button>
+    </a>
+
 </main>
