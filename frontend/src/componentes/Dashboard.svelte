@@ -3,7 +3,8 @@
     import Button, { Label, Icon } from "@smui/button/bare.js";
     import { medicionesServicio } from "../servicios/mediciones.servicio";
     import { onMount } from "svelte";
-  
+    import "@smui/button/bare.css";
+      
     // dato pasado al componente
     export let id;
 

@@ -95,7 +95,7 @@
             <Button color="secondary" variant="raised" type="submit">
                 Guardar
             </Button>
-            <a href="/dispositivos/{dispositivo.id}/historial">
+            <a href="/dispositivos/{dispositivo.id}/mediciones">
                 <Button variant="raised">Ver historial</Button>
             </a>
         </form>

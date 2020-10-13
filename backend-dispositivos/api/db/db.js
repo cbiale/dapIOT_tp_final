@@ -22,6 +22,8 @@ async function iniciar() {
     await r.db('iot').tableCreate('actuadores').run(r.conn);
     await r.db('iot').tableCreate('mediciones').run(r.conn);
     await r.db('iot').table('mediciones').indexCreate('tiempo').run(r.conn);
+    await r.db('iot').tableCreate('logs').run(r.conn);
+    await r.db('iot').table('logs').indexCreate('tiempo').run(r.conn);
   }
 }
 

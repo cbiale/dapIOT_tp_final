@@ -36,25 +36,14 @@ services:
         restart: always
         volumes:
         - ./mosquitto/:/mosquitto/
-<<<<<<< HEAD
-        - ./mosquitto/data
-        - ./mosquitto/log
-=======
         - ./mosquitto/data:/mosquitto/data
         - ./mosquitto/log:/mosquitto/log
->>>>>>> feature/mqtt-pub-sub
         expose:
         - "1883"
         - "9001"
         ports: 
         - 1883:1883
         - 9001:9001
-        depends_on:
-<<<<<<< HEAD
-        - siridb
-=======
-        - rethinkdb
->>>>>>> feature/mqtt-pub-sub
         networks:
         - tp-net
         
