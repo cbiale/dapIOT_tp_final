@@ -36,8 +36,8 @@ services:
         restart: always
         volumes:
         - ./mosquitto/:/mosquitto/
-        - ./mosquitto/data
-        - ./mosquitto/log
+        - ./mosquitto/data:/mosquitto/data
+        - ./mosquitto/log:/mosquitto/log
         expose:
         - "1883"
         - "9001"

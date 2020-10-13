@@ -6,7 +6,6 @@
     import "@smui/button/bare.css";
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
-    import { seriesServicio } from "../servicios/series.servicio";
     import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
 
     // dato pasado al componente
@@ -14,8 +13,6 @@
 
     // datos obtenidos del backend
     let dispositivo;
-    let seriesHumedad;
-    let seriesTemperatura;
 
     // datos formulario
     let valores = {};
@@ -30,21 +27,6 @@
         valores.denominacion = dispositivo.denominacion;
         valores.latitud = dispositivo.ubicacion.coordinates[1];
         valores.longitud = dispositivo.ubicacion.coordinates[0];
-
-        await seriesServicio
-            .obtenerDatos(id + "-Humedad")
-            .then((respuesta) => respuesta.json())
-            .then((resultado) => (seriesHumedad = resultado));
-        await seriesServicio
-            .obtenerDatos(id + "-Temperatura")
-            .then((respuesta) => respuesta.json())
-            .then((respuesta) => (seriesTemperatura = respuesta));
-        console.log(seriesHumedad);
-        console.log(seriesTemperatura);
-        console.log(seriesHumedad.length);
-        for (let i = 0; i < seriesHumedad.length; i++) {
-            console.log(new Date(seriesHumedad[i][0]).toString());
-        }
     });
 
     const capturarErrores = ({ inner }) => {

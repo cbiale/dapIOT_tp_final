@@ -1,37 +1,26 @@
 <script>
     import Chart from "svelte-frappe-charts";
     import Button, { Label, Icon } from "@smui/button/bare.js";
-    import { seriesServicio } from "../servicios/series.servicio";
+    import { medicionesServicio } from "../servicios/mediciones.servicio";
     import { onMount } from "svelte";
-
+  
     // dato pasado al componente
     export let id;
 
     // datos obtenidos del backend
-    let dispositivo;
-    let seriesHumedad;
-    let seriesTotales;
-    let seriesTemperatura;
+    let mediciones;
     let vLabels = [];
     let vHumedad = [];
     let vTemperatura = [];
+    let data;
+
 
     onMount(async () => {
-        await seriesServicio
-            .obtenerDatos(id + "-Humedad")
-            .then((respuesta) => respuesta.json())
-            .then((resultado) => (seriesHumedad = resultado));
-        await seriesServicio
-            .obtenerDatos(id + "-Temperatura")
-            .then((respuesta) => respuesta.json())
-            .then((resultado) => (seriesTemperatura = resultado));
-            await seriesServicio
+        await medicionesServicio
             .obtenerDatos(id)
             .then((respuesta) => respuesta.json())
-            .then((resultado) => (seriesTotales = resultado));
-        console.log(seriesHumedad.length);
-        console.log(seriesTemperatura.length);
-        console.log(seriesTotales);
+            .then((resultado) => (mediciones = resultado));
+
         const options = {
             hour: "numeric",
             minute: "numeric",
@@ -40,31 +29,37 @@
             month: "numeric",
             day: "numeric",
         };
-        for (let i = 0; i < seriesHumedad.length; i++) {
-            vLabels.push(
-                new Date(seriesHumedad[i][0]).toLocaleDateString(
-                    "es-es",
-                    options
-                )
-            );
-            vHumedad.push(seriesHumedad[i][1]);
-            vTemperatura.push(seriesTemperatura[i][1]);
+        console.log(mediciones);
+        // series a usar
+        vTemperatura = Object.keys(mediciones).map(
+            (key) => mediciones[key].temperatura === undefined ? null : mediciones[key].temperatura
+        );
+        vHumedad = Object.keys(mediciones).map(
+            (key) => mediciones[key].humedad === undefined ? null : mediciones[key].humedad
+        );
+        vLabels = Object.keys(mediciones).map((key) => mediciones[key].tiempo);
+        // formate a labels
+        for (var i= 0; i < vLabels.length; i++) {
+            vLabels[i] = new Date(vLabels[i]).toLocaleDateString("ES-es", options);
         }
+        console.log(vHumedad);
+        console.log(vTemperatura);
+        console.log(vLabels);
+        data = {
+            labels: vLabels,
+            datasets: [
+                {
+                    name: "Temperatura",
+                    values: vTemperatura,
+                },
+                {
+                    name: "Humedad",
+                    values: vHumedad,
+                },
+            ],
+        };
     });
 
-    var data = {
-        labels: vLabels,
-        datasets: [
-            {
-                name: "Temperatura",
-                values: vTemperatura,
-            },
-            {
-                name: "Humedad",
-                values: vHumedad,
-            },
-        ],
-    };
     let referencia;
     const exportar = () => referencia.exportChart();
 </script>
@@ -79,7 +74,9 @@
 
 <main>
     <h2>Dispositivo {id}</h2>
-    <Chart {data} type="line" bind:this={referencia} />
+    {#if data}
+        <Chart {data} type="line" bind:this={referencia} />
+    {/if}
     <Button on:click={exportar} variant="outlined">
         <Label>Exportar</Label>
     </Button>
