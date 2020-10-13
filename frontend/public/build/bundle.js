@@ -18006,7 +18006,7 @@ var app = (function (L) {
     const { console: console_1$1 } = globals;
     const file$e = "src/componentes/Dashboard.svelte";
 
-    // (80:8) <Label>
+    // (84:8) <Label>
     function create_default_slot_5$1(ctx) {
     	let t;
 
@@ -18026,14 +18026,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_5$1.name,
     		type: "slot",
-    		source: "(80:8) <Label>",
+    		source: "(84:8) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (79:4) <Button on:click={exportar} variant="outlined">
+    // (83:4) <Button on:click={exportar} variant="outlined">
     function create_default_slot_4$3(ctx) {
     	let label;
     	let current;
@@ -18057,7 +18057,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -18081,14 +18081,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_4$3.name,
     		type: "slot",
-    		source: "(79:4) <Button on:click={exportar} variant=\\\"outlined\\\">",
+    		source: "(83:4) <Button on:click={exportar} variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (84:12) <Label>
+    // (88:12) <Label>
     function create_default_slot_3$3(ctx) {
     	let t;
 
@@ -18108,14 +18108,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$3.name,
     		type: "slot",
-    		source: "(84:12) <Label>",
+    		source: "(88:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (83:8) <Button variant="outlined">
+    // (87:8) <Button variant="outlined">
     function create_default_slot_2$3(ctx) {
     	let label;
     	let current;
@@ -18139,7 +18139,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -18163,14 +18163,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$3.name,
     		type: "slot",
-    		source: "(83:8) <Button variant=\\\"outlined\\\">",
+    		source: "(87:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (89:12) <Label>
+    // (93:12) <Label>
     function create_default_slot_1$3(ctx) {
     	let t;
 
@@ -18190,14 +18190,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$3.name,
     		type: "slot",
-    		source: "(89:12) <Label>",
+    		source: "(93:12) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (88:8) <Button variant="outlined">
+    // (92:8) <Button variant="outlined">
     function create_default_slot$4(ctx) {
     	let label;
     	let current;
@@ -18221,7 +18221,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -18245,7 +18245,7 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$4.name,
     		type: "slot",
-    		source: "(88:8) <Button variant=\\\"outlined\\\">",
+    		source: "(92:8) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
@@ -18318,12 +18318,12 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button2.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$e, 76, 4, 2014);
+    			add_location(h2, file$e, 80, 4, 2248);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$e, 81, 4, 2198);
+    			add_location(a0, file$e, 85, 4, 2432);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$e, 86, 4, 2310);
-    			add_location(main, file$e, 75, 0, 2003);
+    			add_location(a1, file$e, 90, 4, 2544);
+    			add_location(main, file$e, 79, 0, 2237);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -18351,21 +18351,21 @@ var app = (function (L) {
     			chart.$set(chart_changes);
     			const button0_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				button0_changes.$$scope = { dirty, ctx };
     			}
 
     			button0.$set(button0_changes);
     			const button1_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				button1_changes.$$scope = { dirty, ctx };
     			}
 
     			button1.$set(button1_changes);
     			const button2_changes = {};
 
-    			if (dirty & /*$$scope*/ 2048) {
+    			if (dirty & /*$$scope*/ 4096) {
     				button2_changes.$$scope = { dirty, ctx };
     			}
 
@@ -18416,6 +18416,7 @@ var app = (function (L) {
     	let dispositivo;
 
     	let seriesHumedad;
+    	let seriesTotales;
     	let seriesTemperatura;
     	let vLabels = [];
     	let vHumedad = [];
@@ -18424,8 +18425,10 @@ var app = (function (L) {
     	onMount(async () => {
     		await seriesServicio.obtenerDatos(id + "-Humedad").then(respuesta => respuesta.json()).then(resultado => seriesHumedad = resultado);
     		await seriesServicio.obtenerDatos(id + "-Temperatura").then(respuesta => respuesta.json()).then(resultado => seriesTemperatura = resultado);
+    		await seriesServicio.obtenerDatos(id).then(respuesta => respuesta.json()).then(resultado => seriesTotales = resultado);
     		console.log(seriesHumedad.length);
     		console.log(seriesTemperatura.length);
+    		console.log(seriesTotales);
 
     		const options = {
     			hour: "numeric",
@@ -18483,6 +18486,7 @@ var app = (function (L) {
     		id,
     		dispositivo,
     		seriesHumedad,
+    		seriesTotales,
     		seriesTemperatura,
     		vLabels,
     		vHumedad,
@@ -18496,6 +18500,7 @@ var app = (function (L) {
     		if ("id" in $$props) $$invalidate(0, id = $$props.id);
     		if ("dispositivo" in $$props) dispositivo = $$props.dispositivo;
     		if ("seriesHumedad" in $$props) seriesHumedad = $$props.seriesHumedad;
+    		if ("seriesTotales" in $$props) seriesTotales = $$props.seriesTotales;
     		if ("seriesTemperatura" in $$props) seriesTemperatura = $$props.seriesTemperatura;
     		if ("vLabels" in $$props) vLabels = $$props.vLabels;
     		if ("vHumedad" in $$props) vHumedad = $$props.vHumedad;

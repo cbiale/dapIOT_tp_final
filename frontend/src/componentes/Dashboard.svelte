@@ -10,6 +10,7 @@
     // datos obtenidos del backend
     let dispositivo;
     let seriesHumedad;
+    let seriesTotales;
     let seriesTemperatura;
     let vLabels = [];
     let vHumedad = [];
@@ -24,10 +25,13 @@
             .obtenerDatos(id + "-Temperatura")
             .then((respuesta) => respuesta.json())
             .then((resultado) => (seriesTemperatura = resultado));
-
+            await seriesServicio
+            .obtenerDatos(id)
+            .then((respuesta) => respuesta.json())
+            .then((resultado) => (seriesTotales = resultado));
         console.log(seriesHumedad.length);
         console.log(seriesTemperatura.length);
-
+        console.log(seriesTotales);
         const options = {
             hour: "numeric",
             minute: "numeric",

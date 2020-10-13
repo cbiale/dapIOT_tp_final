@@ -2,33 +2,6 @@ version: '3'
 
 services:
 
-    siridb:
-        build: 
-            context: ./siridb
-        hostname: siridb
-        container_name: siridb
-        restart: always        
-        ports: 
-        - 9000:9000
-        - 9010:9010
-        - 9020:9020
-        - 9080:8080
-        networks:
-        - tp-net
-
-    siridb-admin:
-        build: 
-            context: ./siridb-admin
-        hostname: siridb-admin
-        container_name: siridb-admin
-        # restart: always     
-        ports: 
-        - 9180:8080
-        depends_on:
-        - siridb
-        networks:
-        - tp-net
-
     rethinkdb:
         image: rethinkdb:2.4.1
         hostname: rethinkdb
@@ -38,36 +11,6 @@ services:
         - 8080:8080
         volumes:
         - $PWD:/data/r1
-        networks:
-        - tp-net
-
-    backend-tiempos:
-        build: 
-            context: ./backend-tiempos
-        environment: 
-        - HOST=siridb
-        hostname: backend-tiempos
-        container_name: backend-tiempos
-        restart: always     
-        ports: 
-        - 3001:3001
-        depends_on:
-        - siridb
-        networks:
-        - tp-net
-
-    backend-tiempos:
-        build: 
-            context: ./backend-tiempos
-        environment: 
-        - HOST=siridb
-        hostname: backend-tiempos
-        container_name: backend-tiempos
-        restart: always     
-        ports: 
-        - 3001:3001
-        depends_on:
-        - siridb
         networks:
         - tp-net
 
@@ -85,7 +28,28 @@ services:
         - rethinkdb
         networks:
         - tp-net
-    
+
+    mosquitto:
+        image: eclipse-mosquitto:1.6.12
+        hostname: mosquitto
+        container_name: mosquitto
+        restart: always
+        volumes:
+        - ./mosquitto/:/mosquitto/
+        - ./mosquitto/data
+        - ./mosquitto/log
+        expose:
+        - "1883"
+        - "9001"
+        ports: 
+        - 1883:1883
+        - 9001:9001
+        depends_on:
+        - rethinkdb
+        networks:
+        - tp-net
+        
+
 networks:
     tp-net:
         driver: bridge
