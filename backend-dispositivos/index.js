@@ -3,25 +3,19 @@ const cors = require('cors');
 const express = require('express');
 const app = express()
 const puerto = 3000
-
-const dispositivosRuteador = require('./api/rutas/dispositivos');
-const sensoresRuteador = require('./api/rutas/sensores');
-const actuadoresRuteador = require('./api/rutas/actuadores');
-const entidadesRuteador = require('./api/rutas/entidades');
-
 app.use(express.json()); // body parser
 app.use(cors()); // uso de cors
 
+const dispositivosRuteador = require('./api/rutas/dispositivos');
+const medicionesRuteador = require('./api/rutas/mediciones');
+
 // rutas
 app.use('/api/v1/dispositivos', dispositivosRuteador);
-//app.use('/sensores', sensoresRuteador);
-//app.use('/actuadores', actuadoresRuteador);
-//app.use('/entidades', entidadesRuteador);
+app.use('/api/v1/mediciones', medicionesRuteador);
 
 app.get('/', (req, res) => {
   res.send('Dispositivos')
-})
-
+});
 
 // listener
 app.listen(puerto, () => {
