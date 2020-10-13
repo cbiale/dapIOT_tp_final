@@ -113,6 +113,9 @@
             <Button color="secondary" variant="raised" type="submit">
                 Guardar
             </Button>
+            <a href="/dispositivos/{dispositivo.id}/historial">
+                <Button variant="raised">Ver historial</Button>
+            </a>
         </form>
     {/if}
 
