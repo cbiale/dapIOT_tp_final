@@ -4,23 +4,23 @@
     import "@smui/data-table/bare.css";
     import Button, { Label, Icon } from "@smui/button/bare.js";
     import "@smui/button/bare.css";
-    import { medicionesServicio } from "../servicios/mediciones.servicio";
+    import { logsServicio } from "../servicios/logs.servicio";
     import { onMount } from "svelte";
   
     // dato pasado al componente
     export let id;
 
     // datos obtenidos del backend
-    let mediciones = [];
+    let logs = [];
 
 
     onMount(async () => {
-        await medicionesServicio
+        await logsServicio
             .obtenerDatos(id)
             .then((respuesta) => respuesta.json())
-            .then((resultado) => (mediciones = resultado));
+            .then((resultado) => (logs = resultado));
 
-        mediciones = mediciones.reverse();
+        logs = logs.reverse();
         
     });
 
@@ -37,23 +37,21 @@
 <main>
     <h2>Dispositivo</h2>
 
-    {#if mediciones}
+    {#if logs}
         <p>Id <b>{id}</b></p>
     {/if}
-    <DataTable table$aria-label="Listado de Dispositivos">
+    <DataTable table$aria-label="Listado de Logs">
         <Head>
             <Row>
                 <Cell>Momento</Cell>
-                <Cell>Temperatura</Cell>
-                <Cell>Humedad</Cell>
+                <Cell>Estado</Cell>
             </Row>
         </Head>
         <Body>
-            {#each mediciones as medicion}
+            {#each logs as log}
                 <Row>
-                    <Cell>{medicion.tiempo}</Cell>
-                    <Cell>{medicion.temperatura}</Cell>
-                    <Cell>{medicion.humedad}</Cell>
+                    <Cell>{log.tiempo}</Cell>
+                    <Cell>{log.estado}</Cell>
                 </Row>
             {/each}
         </Body>

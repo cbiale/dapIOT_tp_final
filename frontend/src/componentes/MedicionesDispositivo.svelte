@@ -36,7 +36,7 @@
     {#if mediciones}
         <p>Id <b>{id}</b></p>
 
-        <DataTable table$aria-label="Listado de Dispositivos">
+        <DataTable table$aria-label="Listado de Mediciones">
             <Head>
                 <Row>
                     <Cell>Momento</Cell>

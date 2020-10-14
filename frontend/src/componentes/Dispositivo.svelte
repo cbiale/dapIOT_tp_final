@@ -98,6 +98,9 @@
             <a href="/dispositivos/{dispositivo.id}/mediciones">
                 <Button variant="raised">Ver historial</Button>
             </a>
+            <a href="/dispositivos/{dispositivo.id}/logs">
+                <Button variant="raised">Ver logs</Button>
+            </a>
         </form>
     {/if}
 

@@ -11,6 +11,7 @@
   import Dashboard from "./componentes/Dashboard.svelte";
   import Mapa from "./componentes/Mapa.svelte";
   import MedicionesDispositivo from "./componentes/MedicionesDispositivo.svelte";
+  import LogsDispositivo from "./componentes/LogsDispositivo.svelte";
 </script>
 
 <style>
@@ -26,6 +27,7 @@
     <Ruta path="/dispositivos/:id" componente={Dispositivo} let:parametros />
     <Ruta path="/dispositivos/:id/dashboard" componente={Dashboard} let:parametros />    
     <Ruta path="/dispositivos/:id/mediciones" componente={MedicionesDispositivo} let:parametros />    
+    <Ruta path="/dispositivos/:id/logs" componente={LogsDispositivo} let:parametros />    
     <Ruta path= "*" componente= {NoEncontrado} />
   </Ruteador>
 </main>
