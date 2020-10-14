@@ -1,8 +1,9 @@
-// backend
+const async = require('async');
 const cors = require('cors');
 const express = require('express');
 const app = express()
 const puerto = 3000
+
 app.use(express.json()); // body parser
 app.use(cors()); // uso de cors
 
@@ -14,10 +15,15 @@ app.use('/api/v1/dispositivos', dispositivosRuteador);
 app.use('/api/v1/mediciones', medicionesRuteador);
 
 app.get('/', (req, res) => {
-  res.send('Dispositivos')
+    res.send('Dispositivos')
 });
 
 // listener
+
+
+
 app.listen(puerto, () => {
-  console.log(`Servicio en  http://localhost:${puerto}`)
-})
+    console.log(`Servicio en  http://localhost:${puerto}`);
+});
+
+
