@@ -16,5 +16,5 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 
 - **Leaflet**: mapas.
 - **yul**: validaciones.
-- **svelte-frappe-charts**: dashboard.
+  - **svelte-frappe-charts**: dashboard.
 - **Svelte Material UI**: componentes Material UI.

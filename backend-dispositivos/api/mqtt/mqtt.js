@@ -7,6 +7,7 @@ function clienteMqtt() {
     function msleep(n) {
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
     }
+
     function sleep(n) {
         msleep(n * 1000);
     }
@@ -41,22 +42,35 @@ function clienteMqtt() {
 
     // agregar medición
     async function agregarMedicion(topico, mensaje) {
-        mensaje.dispositivoId = topico;
-        mensaje.tiempo = new Date().toJSON();
-        console.log(`Agregando medición...`);
-        console.log(mensaje);
+        if (topico.indexOf("/sensores") != -1) {
+            mensaje.dispositivoId = topico.substring(0, topico.indexOf("/sensores"));
 
-        try {
-            // inserto dispositivo
-            var resultado = await r.db('iot').table('mediciones').insert
-                (
-                    mensaje
-                ).
-                run(r.conn);
-        } catch (err) {
-            console.warn(err);
+            let cantidad = await r.db('iot').table('dispositivos')
+                .filter(
+                    {
+                        id: mensaje.dispositivoId
+                    }).count().run(r.conn);
+                    
+            if (cantidad != 0) {
+                mensaje.tiempo = new Date().toJSON();
+                console.log(`Agregando medición...`);
+                console.log(mensaje);
+
+                try {
+                    // inserto dispositivo
+                    var resultado = await r.db('iot').table('mediciones').insert
+                        (
+                            mensaje
+                        ).
+                        run(r.conn);
+                } catch (err) {
+                    console.warn(err);
+                }
+            } else {
+                console.log("Dispositivo erroneo");
+            }
         }
     }
 }
 
-exports.clienteMqtt = clienteMqtt;
+    exports.clienteMqtt = clienteMqtt;
