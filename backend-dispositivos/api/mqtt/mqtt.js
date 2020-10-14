@@ -28,10 +28,15 @@ function clienteMqtt() {
     cliente.on('message', (topico, mensaje) => {
         try {
             let datos = JSON.parse(mensaje);
-            agregarMedicion(topico, datos);
+            try {
+                agregarMedicion(topico, datos);
+            } catch (error) {
+                console.log("Error al insertar datos");
+            }
         } catch (error) {
             console.log("Mensaje mal formado");
         }
+
     });
 
     // agregar medición
