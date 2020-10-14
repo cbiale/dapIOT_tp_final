@@ -9,8 +9,10 @@
   "author": "Claudio Omar Biale",
   "license": "ISC",
   "dependencies": {
+    "async": "^3.2.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "mqtt": "^4.2.1",
     "rethinkdb": "^2.4.2",
     "socket.io": "^2.3.0"
   }
