@@ -6,20 +6,20 @@ exports.listarLogs = async function (req, res, next) {
     console.log(`Obteniendo logs de : ${id}`);
 
     try {
-        var datos = await r.db('iot').table('logs').orderBy({index: 'tiempo'})
+        let datos = await r.db('iot').table('logs')
+            .orderBy({ index: r.desc('tiempo') })
             .filter({ 'dispositivoId': id }).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
-    resultado = await datos.toArray();
+    let resultado = await datos.toArray();
     res.status(200).json(resultado);
 };
 
 exports.agregarLog = async function (req, res, next) {
     console.log(`Agregando log...`);
-    console.log(req.body);
-    const id = req.body.dispositivoId;
     // datos a recibir
+    const id = req.body.dispositivoId;
     const estado = req.body.ultimoEstado;
     const tiempo = new Date().toJSON();
 
@@ -32,11 +32,11 @@ exports.agregarLog = async function (req, res, next) {
     if (cantidad != 0) {
         try {
             // inserto dispositivo
-            var resultado = await r.db('iot').table('logs').insert
+            let resultado = await r.db('iot').table('logs').insert
                 ({
                     dispositivoId: id,
                     tiempo: tiempo,
-                    estado: estado     
+                    estado: estado
                 }).
                 run(r.conn);
         } catch (err) {
@@ -46,4 +46,3 @@ exports.agregarLog = async function (req, res, next) {
         console.log("Dispositivo erroneo");
     }
 }
-

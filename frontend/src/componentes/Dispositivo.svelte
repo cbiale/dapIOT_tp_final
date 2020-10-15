@@ -20,7 +20,7 @@
     let valores = {};
     let errores = {};
     let estado = {};
-    let ultimoEstado = {}
+    
 
     onMount(async () => {
         await dispositivosServicio
@@ -28,12 +28,12 @@
             .then((respuesta) => respuesta.json())
             .then((resultado) => (dispositivo = resultado));
 
-
         await logsServicio
-            .obtenerDatos(id)
+            .obtenerLogs(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (datosLogs = resultado));
-
+        console.log(datosLogs);
+        
         if (datosLogs.length > 0) {
             estado.ultimoEstado = datosLogs[0].estado;
         } else {
@@ -63,8 +63,9 @@
             .catch((err) => (errores = capturarErrores(err)));
     };
 
-    const cambiar = () => {
-        if (estado.ultimoEstado == "Activado") {
+    async function cambiar ()  {
+        console.log(estado.ultimoEstado);
+        if (estado.ultimoEstado === "Activado") {
             estado.ultimoEstado = "Desactivado";
         } else {
             estado.ultimoEstado = "Activado";
@@ -133,7 +134,7 @@
             </a>
         </form>
 
-        <Button variant="raised" on:click={() => cambiar(estado)}>
+        <Button variant="raised" on:click={() => cambiar()}>
             Cambiar estado
         </Button>
     {/if}

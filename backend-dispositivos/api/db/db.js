@@ -28,7 +28,19 @@ async function iniciar() {
         await r.db('iot').table('logs').indexCreate('tiempo').run(r.conn);
     }
     console.log("iniciar finalizado");
+    // espero 5 segundos para iniciar el cliente MQTT
+    sleep(5); 
+    // inicio cliente MQTT 
+    // Lo pongo en este punto para asegurarme inicie luego de la base de datos   
     clienteMqtt();
+}
+
+function msleep(n) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+}
+
+function sleep(n) {
+    msleep(n * 1000);
 }
 
 module.exports = r;

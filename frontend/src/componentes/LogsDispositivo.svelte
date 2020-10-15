@@ -16,12 +16,9 @@
 
     onMount(async () => {
         await logsServicio
-            .obtenerDatos(id)
+            .obtenerLogs(id)
             .then((respuesta) => respuesta.json())
-            .then((resultado) => (logs = resultado));
-
-        logs = logs.reverse();
-        
+            .then((resultado) => (logs = resultado));        
     });
 
 </script>

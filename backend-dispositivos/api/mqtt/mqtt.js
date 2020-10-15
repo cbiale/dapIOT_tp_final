@@ -4,19 +4,9 @@ function clienteMqtt() {
     const cliente = MQTT.connect("mqtt://mosquitto:1883");
     const r = require('../db/db');
 
-    function msleep(n) {
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
-    }
-
-    function sleep(n) {
-        msleep(n * 1000);
-    }
-
     // al conectarse
     cliente.on('connect', () => {
         console.log("Conectado a servidor MQTT");
-        sleep(5);
-        console.log("Escuchando MQTT");
         cliente.subscribe('#');
     });
 
@@ -49,26 +39,24 @@ function clienteMqtt() {
         if (topico.indexOf("/sensores") != -1) {
             mensaje.dispositivoId = topico.substring(0, topico.indexOf("/sensores"));
 
+            // controlo si existe el dispositivo 
             let cantidad = await r.db('iot').table('dispositivos')
                 .filter(
                     {
                         id: mensaje.dispositivoId
-                    }).count().run(r.conn);
+                    }
+                ).count().run(r.conn);
 
             if (cantidad != 0) {
                 mensaje.tiempo = new Date().toJSON();
                 console.log(`Agregando medición...`);
-                console.log(mensaje);
 
                 try {
                     // inserto dispositivo
-                    var resultado = await r.db('iot').table('mediciones').insert
-                        (
-                            mensaje
-                        ).
-                        run(r.conn);
-                } catch (err) {
-                    console.warn(err);
+                    let resultado = await r.db('iot').table('mediciones')
+                        .insert(mensaje).run(r.conn);
+                } catch (error) {
+                    console.log(error);
                 }
             } else {
                 console.log("Dispositivo erroneo");
@@ -76,6 +64,5 @@ function clienteMqtt() {
         }
     }
 }
-
 
 exports.clienteMqtt = clienteMqtt;

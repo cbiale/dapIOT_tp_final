@@ -3,16 +3,17 @@ let r = require('../db/db');
 // listado de dispositivos
 exports.listarDispositivos = async function (req, res, next) {
     try {
-        var datos = await r.db('iot').table('dispositivos').filter(
-            {
-                borrado: 0
-            }
-        ).run(r.conn);
+        let datos = await r.db('iot').table('dispositivos')
+            .filter(
+                {
+                    borrado: 0
+                }
+            ).run(r.conn);
     } catch (err) {
         throw new Error(err);
         // analizar console.warn(err);
     }
-    resultado = await datos.toArray();
+    let resultado = await datos.toArray();
     res.status(200).json(resultado);
 };
 
@@ -22,7 +23,8 @@ exports.obtenerDispositivo = async function (req, res, next) {
     console.log(`Obteniendo dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).run(r.conn);
+        let resultado = await r.db('iot').table('dispositivos')
+        .get(id).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
@@ -35,7 +37,8 @@ exports.eliminarDispositivo = async function (req, res, next) {
     console.log(`Eliminando dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).update(
+        let resultado = await r.db('iot').table('dispositivos')
+        .get(id).update(
             { borrado: 1 }
         ).run(r.conn);
     } catch (err1) {
@@ -56,7 +59,7 @@ exports.agregarDispositivo = async function (req, res, next) {
 
     try {
         // inserto dispositivo
-        var resultado = await r.db('iot').table('dispositivos').insert
+        let resultado = await r.db('iot').table('dispositivos').insert
             (
                 {
                     denominacion: denominacion,
@@ -84,7 +87,7 @@ exports.modificarDispositivo = async function (req, res, next) {
     const latitud = Number.parseFloat(req.body.latitud, 10);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).update(
+        let resultado = await r.db('iot').table('dispositivos').get(id).update(
             {
                 denominacion: denominacion,
                 ubicacion: r.point(longitud, latitud),

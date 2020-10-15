@@ -1,6 +1,6 @@
 const BASE_URL = "http://localhost:3000/api/v1/logs/"
 
-async function obtenerDatos(id) {
+async function obtenerLogs(id) {
     let respuesta = await fetch(`${BASE_URL}/${id}`, {
         method: 'GET',
     });
@@ -23,4 +23,4 @@ async function agregarLog(datos) {
     }
 }
 
-export const logsServicio = { obtenerDatos, agregarLog };
+export const logsServicio = { obtenerLogs, agregarLog };

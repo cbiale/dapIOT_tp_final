@@ -17,8 +17,6 @@
             .obtenerDatos(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (mediciones = resultado));
-
-        mediciones = mediciones.reverse();
     });
 </script>
 

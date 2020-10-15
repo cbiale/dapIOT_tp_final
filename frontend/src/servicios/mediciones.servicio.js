@@ -1,6 +1,6 @@
 const BASE_URL = "http://localhost:3000/api/v1/mediciones/"
 
-async function obtenerDatos(id) {
+async function obtenerMediciones(id) {
     let respuesta = await fetch(`${BASE_URL}/${id}`, {
         method: 'GET',
     });
@@ -11,4 +11,4 @@ async function obtenerDatos(id) {
     return respuesta;
 }
 
-export const medicionesServicio = { obtenerDatos };
+export const medicionesServicio = { obtenerMediciones };

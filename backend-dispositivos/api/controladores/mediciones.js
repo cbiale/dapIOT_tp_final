@@ -6,11 +6,12 @@ exports.listarMediciones = async function (req, res, next) {
     console.log(`Obteniendo mediciones de : ${id}`);
 
     try {
-        var datos = await r.db('iot').table('mediciones').orderBy({index: 'tiempo'})
+        let datos = await r.db('iot').table('mediciones')
+            .orderBy({ index: r.desc('tiempo') })
             .filter({ 'dispositivoId': id }).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
-    resultado = await datos.toArray();
+    let resultado = await datos.toArray();
     res.status(200).json(resultado);
 };
