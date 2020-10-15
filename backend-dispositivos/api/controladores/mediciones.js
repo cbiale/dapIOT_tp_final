@@ -6,7 +6,7 @@ exports.listarMediciones = async function (req, res, next) {
     console.log(`Obteniendo mediciones de : ${id}`);
 
     try {
-        var datos = await r.db('iot').table('mediciones')
+        var datos = await r.db('iot').table('mediciones').orderBy({index: 'tiempo'})
             .filter({ 'dispositivoId': id }).run(r.conn);
     } catch (err) {
         console.warn(err);

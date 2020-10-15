@@ -11,4 +11,16 @@ async function obtenerDatos(id) {
     return respuesta;
 }
 
-export const logsServicio = { obtenerDatos };
+async function agregarLog(datos) {
+    let respuesta = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(datos)
+    })
+
+    if (respuesta.status !== 201) {
+        throw new Error(`Estado HTTP ${respuesta.status}`);
+    }
+}
+
+export const logsServicio = { obtenerDatos, agregarLog };

@@ -18,6 +18,7 @@ const int    MQTT_PUERTO         = 1883;
 // topicos
 const String TOPICO_SENSORES     = DISPOSITIVO_ID + "/sensores";
 const String TOPICO_ACTUADOR     = DISPOSITIVO_ID + "/actuador";
+const String TOPICO_ACTUADOR_C   = DISPOSITIVO_ID + "/cambio";
 
 // LED
 static uint32_t estadoLed = 0;
@@ -74,7 +75,7 @@ void conectarMQTT(){
         if (clienteMqtt.connect(DISPOSITIVO_ID.c_str())) {
             Serial.println("conectado!!");
             // Subscribo a un tópico
-            clienteMqtt.subscribe(TOPICO_ACTUADOR.c_str());
+            clienteMqtt.subscribe(TOPICO_ACTUADOR_C.c_str());
         } else {
             Serial.print("fallo, rc = ");
             Serial.print(clienteMqtt.state());
@@ -96,7 +97,7 @@ void publicarMqtt (String topico, String valor){
 }
 
 void subscribirMqtt (char* topico, byte* valor, unsigned int largo){
-    if (strcmp(topico, TOPICO_ACTUADOR.c_str()) == 0){
+    if (strcmp(topico, TOPICO_ACTUADOR_C.c_str()) == 0){
         // agrega el caracter nulo
         valor[largo] = '\0';
         // string -> int

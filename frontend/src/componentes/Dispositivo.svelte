@@ -7,16 +7,20 @@
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
     import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
+    import { logsServicio } from "../servicios/logs.servicio";
 
     // dato pasado al componente
     export let id;
 
     // datos obtenidos del backend
     let dispositivo;
-
+    let datosLogs;
+    
     // datos formulario
     let valores = {};
     let errores = {};
+    let estado = {};
+    let ultimoEstado = {}
 
     onMount(async () => {
         await dispositivosServicio
@@ -24,6 +28,18 @@
             .then((respuesta) => respuesta.json())
             .then((resultado) => (dispositivo = resultado));
 
+
+        await logsServicio
+            .obtenerDatos(id)
+            .then((respuesta) => respuesta.json())
+            .then((resultado) => (datosLogs = resultado));
+
+        if (datosLogs.length > 0) {
+            estado.ultimoEstado = datosLogs[0].estado;
+        } else {
+            estado.ultimoEstado = 'Desactivado';
+        }
+        estado.dispositivoId = id;
         valores.denominacion = dispositivo.denominacion;
         valores.latitud = dispositivo.ubicacion.coordinates[1];
         valores.longitud = dispositivo.ubicacion.coordinates[0];
@@ -46,6 +62,17 @@
             })
             .catch((err) => (errores = capturarErrores(err)));
     };
+
+    const cambiar = () => {
+        if (estado.ultimoEstado == "Activado") {
+            estado.ultimoEstado = "Desactivado";
+        } else {
+            estado.ultimoEstado = "Activado";
+        }
+        console.log('cambio');
+        logsServicio.agregarLog(estado)
+        .then(() => location.replace(`/dispositivos/${dispositivo.id}`));;
+    }
 </script>
 
 <style>
@@ -59,7 +86,7 @@
 <main>
     <h2>Dispositivo</h2>
 
-    {#if dispositivo}
+    {#if dispositivo && estado}
         <p>Id <b>{dispositivo.id}</b></p>
         <form on:submit|preventDefault={guardar}>
             <label for="denominacion">Denominación</label>
@@ -92,6 +119,9 @@
                     placeholder="longitud del dispositivo" />
                 {#if errores.longitud}{errores.longitud}{/if}
             </div>
+            <div>
+                <p>Estado luz: {estado.ultimoEstado}</p>
+            </div>
             <Button color="secondary" variant="raised" type="submit">
                 Guardar
             </Button>
@@ -102,6 +132,10 @@
                 <Button variant="raised">Ver logs</Button>
             </a>
         </form>
+
+        <Button variant="raised" on:click={() => cambiar(estado)}>
+            Cambiar estado
+        </Button>
     {/if}
 
     <hr />

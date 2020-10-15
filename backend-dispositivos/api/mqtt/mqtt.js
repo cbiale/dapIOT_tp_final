@@ -28,7 +28,10 @@ function clienteMqtt() {
     // al recibir un mensaje
     cliente.on('message', (topico, mensaje) => {
         try {
-            let datos = JSON.parse(mensaje);
+            let datos;
+            if (topico.indexOf("/sensores") != -1) {
+                datos = JSON.parse(mensaje);
+            }
             try {
                 agregarMedicion(topico, datos);
             } catch (error) {
@@ -42,6 +45,7 @@ function clienteMqtt() {
 
     // agregar medición
     async function agregarMedicion(topico, mensaje) {
+        console.log(mensaje);
         if (topico.indexOf("/sensores") != -1) {
             mensaje.dispositivoId = topico.substring(0, topico.indexOf("/sensores"));
 
@@ -50,7 +54,7 @@ function clienteMqtt() {
                     {
                         id: mensaje.dispositivoId
                     }).count().run(r.conn);
-                    
+
             if (cantidad != 0) {
                 mensaje.tiempo = new Date().toJSON();
                 console.log(`Agregando medición...`);
@@ -73,4 +77,5 @@ function clienteMqtt() {
     }
 }
 
-    exports.clienteMqtt = clienteMqtt;
+
+exports.clienteMqtt = clienteMqtt;
