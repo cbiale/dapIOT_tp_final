@@ -14,7 +14,7 @@
 
     onMount(async () => {
         await medicionesServicio
-            .obtenerDatos(id)
+            .obtenerMediciones(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (mediciones = resultado));
     });
@@ -56,7 +56,7 @@
                         <Cell>{medicion.temperatura}</Cell>
                         <Cell>{medicion.humedad}</Cell>
                     </Row>
-                {/each}
+                     {/each}
             </Body>
         </DataTable>
     {/if}

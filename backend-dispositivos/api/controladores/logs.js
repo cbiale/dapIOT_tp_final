@@ -1,4 +1,4 @@
-let r = require('../db/db');
+var r = require('../db/db');
 
 // listado de mediciones
 exports.listarLogs = async function (req, res, next) {
@@ -6,13 +6,13 @@ exports.listarLogs = async function (req, res, next) {
     console.log(`Obteniendo logs de : ${id}`);
 
     try {
-        let datos = await r.db('iot').table('logs')
+        var datos = await r.db('iot').table('logs')
             .orderBy({ index: r.desc('tiempo') })
             .filter({ 'dispositivoId': id }).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
-    let resultado = await datos.toArray();
+    var resultado = await datos.toArray();
     res.status(200).json(resultado);
 };
 
@@ -23,7 +23,7 @@ exports.agregarLog = async function (req, res, next) {
     const estado = req.body.ultimoEstado;
     const tiempo = new Date().toJSON();
 
-    let cantidad = await r.db('iot').table('dispositivos')
+    var cantidad = await r.db('iot').table('dispositivos')
         .filter(
             {
                 id: id
@@ -32,7 +32,7 @@ exports.agregarLog = async function (req, res, next) {
     if (cantidad != 0) {
         try {
             // inserto dispositivo
-            let resultado = await r.db('iot').table('logs').insert
+            var resultado = await r.db('iot').table('logs').insert
                 ({
                     dispositivoId: id,
                     tiempo: tiempo,

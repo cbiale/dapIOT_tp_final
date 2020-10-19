@@ -8,7 +8,7 @@
 const int LED                    = 32;
 const int DHT22_PIN              = 23;
 // Dispositivo ID
-const String DISPOSITIVO_ID      = "1";
+const String DISPOSITIVO_ID      = "05a80e1b-5b85-44e8-a27f-5a21b7c947e4";
 // Wifi
 const String WIFI_SSID           = "Pippe";
 const String WIFI_CLAVE          = "carolina0304";
@@ -17,7 +17,7 @@ const String MQTT_SERVIDOR       = "192.168.0.10";
 const int    MQTT_PUERTO         = 1883;
 // topicos
 const String TOPICO_SENSORES     = DISPOSITIVO_ID + "/sensores";
-const String TOPICO_ACTUADOR     = DISPOSITIVO_ID + "/actuador";
+// const String TOPICO_ACTUADOR     = DISPOSITIVO_ID + "/actuador";
 const String TOPICO_ACTUADOR_C   = DISPOSITIVO_ID + "/cambio";
 
 // LED
@@ -166,9 +166,9 @@ void appLoop() {
     int temporalHumedad = random(30, 101);
     String valores = String(" { \"temperatura\": ") + String(temporalTemperatura);
     valores = valores + String(", \"humedad\": ") + String(temporalHumedad) + String("}"); 
-    publicarMqtt(TOPICO_SENSORES, valores);
+    // publicarMqtt(TOPICO_SENSORES, valores);
     String mensajeLed = String("" + estadoLed);
-    publicarMqtt(TOPICO_ACTUADOR, mensajeLed);
+    // publicarMqtt(TOPICO_ACTUADOR, mensajeLed);
   }
 
 }

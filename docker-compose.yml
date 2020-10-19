@@ -48,6 +48,20 @@ services:
         networks:
         - tp-net
 
+    frontend-dispositivos:
+        build: 
+            context: ./frontend
+        hostname: frontend
+        container_name: frontend
+        restart: always     
+        ports: 
+        - 5000:5000
+        depends_on:
+        - rethinkdb
+        - mosquitto
+        - backend-dispositivos
+        networks:
+        - tp-net
 
 networks:
     tp-net:

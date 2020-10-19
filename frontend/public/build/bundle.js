@@ -16134,7 +16134,7 @@ var app = (function (L) {
     const { console: console_1 } = globals;
     const file$b = "src/componentes/Dispositivo.svelte";
 
-    // (90:4) {#if dispositivo && estado}
+    // (118:1) {#if dispositivo && estado}
     function create_if_block$3(ctx) {
     	let p0;
     	let t0;
@@ -16271,39 +16271,39 @@ var app = (function (L) {
     			create_component(button2.$$.fragment);
     			t20 = space();
     			create_component(button3.$$.fragment);
-    			add_location(b, file$b, 90, 14, 2734);
-    			add_location(p0, file$b, 90, 8, 2728);
+    			add_location(b, file$b, 118, 8, 2979);
+    			add_location(p0, file$b, 118, 2, 2973);
     			attr_dev(label0, "for", "denominacion");
-    			add_location(label0, file$b, 92, 12, 2824);
+    			add_location(label0, file$b, 120, 3, 3054);
     			attr_dev(input0, "id", "denominacion");
     			attr_dev(input0, "name", "denominacion");
     			attr_dev(input0, "type", "text");
     			attr_dev(input0, "placeholder", "denominación del dispositivo");
-    			add_location(input0, file$b, 94, 16, 2905);
-    			add_location(div0, file$b, 93, 12, 2883);
+    			add_location(input0, file$b, 122, 4, 3114);
+    			add_location(div0, file$b, 121, 3, 3104);
     			attr_dev(label1, "for", "latitud");
-    			add_location(label1, file$b, 102, 12, 3243);
+    			add_location(label1, file$b, 130, 3, 3347);
     			attr_dev(input1, "id", "latitud");
     			attr_dev(input1, "name", "latitud");
     			attr_dev(input1, "type", "text");
     			attr_dev(input1, "placeholder", "latitud del dispositivo");
-    			add_location(input1, file$b, 104, 16, 3314);
-    			add_location(div1, file$b, 103, 12, 3292);
+    			add_location(input1, file$b, 132, 4, 3397);
+    			add_location(div1, file$b, 131, 3, 3387);
     			attr_dev(label2, "for", "longitud");
-    			add_location(label2, file$b, 112, 12, 3622);
+    			add_location(label2, file$b, 140, 3, 3600);
     			attr_dev(input2, "id", "longitud");
     			attr_dev(input2, "name", "longitud");
     			attr_dev(input2, "type", "text");
     			attr_dev(input2, "placeholder", "longitud del dispositivo");
-    			add_location(input2, file$b, 114, 16, 3695);
-    			add_location(div2, file$b, 113, 12, 3673);
-    			add_location(p1, file$b, 123, 16, 4031);
-    			add_location(div3, file$b, 122, 12, 4009);
+    			add_location(input2, file$b, 142, 4, 3652);
+    			add_location(div2, file$b, 141, 3, 3642);
+    			add_location(p1, file$b, 151, 4, 3871);
+    			add_location(div3, file$b, 150, 3, 3861);
     			attr_dev(a0, "href", a0_href_value = "/dispositivos/" + /*dispositivo*/ ctx[0].id + "/mediciones");
-    			add_location(a0, file$b, 128, 12, 4219);
+    			add_location(a0, file$b, 156, 3, 4011);
     			attr_dev(a1, "href", a1_href_value = "/dispositivos/" + /*dispositivo*/ ctx[0].id + "/logs");
-    			add_location(a1, file$b, 131, 12, 4365);
-    			add_location(form, file$b, 91, 8, 2770);
+    			add_location(a1, file$b, 159, 3, 4127);
+    			add_location(form, file$b, 119, 2, 3009);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p0, anchor);
@@ -16420,14 +16420,14 @@ var app = (function (L) {
     			if ((!current || dirty & /*estado*/ 8) && t16_value !== (t16_value = /*estado*/ ctx[3].ultimoEstado + "")) set_data_dev(t16, t16_value);
     			const button0_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button0_changes.$$scope = { dirty, ctx };
     			}
 
     			button0.$set(button0_changes);
     			const button1_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -16439,7 +16439,7 @@ var app = (function (L) {
 
     			const button2_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button2_changes.$$scope = { dirty, ctx };
     			}
 
@@ -16451,7 +16451,7 @@ var app = (function (L) {
 
     			const button3_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button3_changes.$$scope = { dirty, ctx };
     			}
 
@@ -16493,14 +16493,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block$3.name,
     		type: "if",
-    		source: "(90:4) {#if dispositivo && estado}",
+    		source: "(118:1) {#if dispositivo && estado}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (101:16) {#if errores.denominacion}
+    // (129:4) {#if errores.denominacion}
     function create_if_block_3(ctx) {
     	let t_value = /*errores*/ ctx[2].denominacion + "";
     	let t;
@@ -16524,14 +16524,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block_3.name,
     		type: "if",
-    		source: "(101:16) {#if errores.denominacion}",
+    		source: "(129:4) {#if errores.denominacion}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (111:16) {#if errores.latitud}
+    // (139:4) {#if errores.latitud}
     function create_if_block_2(ctx) {
     	let t_value = /*errores*/ ctx[2].latitud + "";
     	let t;
@@ -16555,14 +16555,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(111:16) {#if errores.latitud}",
+    		source: "(139:4) {#if errores.latitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (121:16) {#if errores.longitud}
+    // (149:4) {#if errores.longitud}
     function create_if_block_1$1(ctx) {
     	let t_value = /*errores*/ ctx[2].longitud + "";
     	let t;
@@ -16586,14 +16586,14 @@ var app = (function (L) {
     		block,
     		id: create_if_block_1$1.name,
     		type: "if",
-    		source: "(121:16) {#if errores.longitud}",
+    		source: "(149:4) {#if errores.longitud}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (126:12) <Button color="secondary" variant="raised" type="submit">
+    // (154:3) <Button color="secondary" variant="raised" type="submit">
     function create_default_slot_7$1(ctx) {
     	let t;
 
@@ -16613,14 +16613,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_7$1.name,
     		type: "slot",
-    		source: "(126:12) <Button color=\\\"secondary\\\" variant=\\\"raised\\\" type=\\\"submit\\\">",
+    		source: "(154:3) <Button color=\\\"secondary\\\" variant=\\\"raised\\\" type=\\\"submit\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (130:16) <Button variant="raised">
+    // (158:4) <Button variant="raised">
     function create_default_slot_6$1(ctx) {
     	let t;
 
@@ -16640,14 +16640,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_6$1.name,
     		type: "slot",
-    		source: "(130:16) <Button variant=\\\"raised\\\">",
+    		source: "(158:4) <Button variant=\\\"raised\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (133:16) <Button variant="raised">
+    // (161:4) <Button variant="raised">
     function create_default_slot_5$1(ctx) {
     	let t;
 
@@ -16667,14 +16667,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_5$1.name,
     		type: "slot",
-    		source: "(133:16) <Button variant=\\\"raised\\\">",
+    		source: "(161:4) <Button variant=\\\"raised\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (137:8) <Button variant="raised" on:click={() => cambiar()}>
+    // (165:2) <Button variant="raised" on:click={() => cambiar()}>
     function create_default_slot_4$1(ctx) {
     	let t;
 
@@ -16694,14 +16694,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_4$1.name,
     		type: "slot",
-    		source: "(137:8) <Button variant=\\\"raised\\\" on:click={() => cambiar()}>",
+    		source: "(165:2) <Button variant=\\\"raised\\\" on:click={() => cambiar()}>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (145:12) <Label>
+    // (173:3) <Label>
     function create_default_slot_3$1(ctx) {
     	let t;
 
@@ -16721,14 +16721,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_3$1.name,
     		type: "slot",
-    		source: "(145:12) <Label>",
+    		source: "(173:3) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (144:8) <Button variant="outlined">
+    // (172:2) <Button variant="outlined">
     function create_default_slot_2$1(ctx) {
     	let label;
     	let current;
@@ -16752,7 +16752,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -16776,14 +16776,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_2$1.name,
     		type: "slot",
-    		source: "(144:8) <Button variant=\\\"outlined\\\">",
+    		source: "(172:2) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
     	return block;
     }
 
-    // (150:12) <Label>
+    // (178:3) <Label>
     function create_default_slot_1$1(ctx) {
     	let t;
 
@@ -16803,14 +16803,14 @@ var app = (function (L) {
     		block,
     		id: create_default_slot_1$1.name,
     		type: "slot",
-    		source: "(150:12) <Label>",
+    		source: "(178:3) <Label>",
     		ctx
     	});
 
     	return block;
     }
 
-    // (149:8) <Button variant="outlined">
+    // (177:2) <Button variant="outlined">
     function create_default_slot$2(ctx) {
     	let label;
     	let current;
@@ -16834,7 +16834,7 @@ var app = (function (L) {
     		p: function update(ctx, dirty) {
     			const label_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				label_changes.$$scope = { dirty, ctx };
     			}
 
@@ -16858,7 +16858,7 @@ var app = (function (L) {
     		block,
     		id: create_default_slot$2.name,
     		type: "slot",
-    		source: "(149:8) <Button variant=\\\"outlined\\\">",
+    		source: "(177:2) <Button variant=\\\"outlined\\\">",
     		ctx
     	});
 
@@ -16913,14 +16913,14 @@ var app = (function (L) {
     			t4 = space();
     			a1 = element("a");
     			create_component(button1.$$.fragment);
-    			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$b, 87, 4, 2666);
-    			add_location(hr, file$b, 141, 4, 4626);
+    			attr_dev(h2, "class", "svelte-wt8a0i");
+    			add_location(h2, file$b, 115, 1, 2920);
+    			add_location(hr, file$b, 169, 1, 4334);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$b, 142, 4, 4637);
+    			add_location(a0, file$b, 170, 1, 4342);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$b, 147, 4, 4749);
-    			add_location(main, file$b, 86, 0, 2655);
+    			add_location(a1, file$b, 175, 1, 4427);
+    			add_location(main, file$b, 114, 0, 2912);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -16966,14 +16966,14 @@ var app = (function (L) {
 
     			const button0_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button0_changes.$$scope = { dirty, ctx };
     			}
 
     			button0.$set(button0_changes);
     			const button1_changes = {};
 
-    			if (dirty & /*$$scope*/ 8192) {
+    			if (dirty & /*$$scope*/ 32768) {
     				button1_changes.$$scope = { dirty, ctx };
     			}
 
@@ -17014,7 +17014,11 @@ var app = (function (L) {
     function instance$e($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots("Dispositivo", slots, []);
+    	const cliente = mqtt.connect("ws://:1883");
     	let { id } = $$props;
+
+    	// topico de Mqtt
+    	let topico = `${id}/cambio`;
 
     	// datos obtenidos del backend
     	let dispositivo;
@@ -17060,18 +17064,41 @@ var app = (function (L) {
     		}).catch(err => $$invalidate(2, errores = capturarErrores(err)));
     	};
 
+    	// Mqtt
+    	// al conectarse
+    	cliente.on("connect", () => {
+    		console.log("Conectado a servidor MQTT");
+    		cliente.subscribe("#");
+    	});
+
+    	// en caso de error al comenzar
+    	cliente.on("error", error => {
+    		console.log(`Error al conectarse: ${error}`);
+    	});
+
+    	// cambio de estado
     	async function cambiar() {
-    		console.log(estado.ultimoEstado);
+    		let cambio;
 
     		if (estado.ultimoEstado === "Activado") {
     			$$invalidate(3, estado.ultimoEstado = "Desactivado", estado);
+    			cambio = 0;
     		} else {
     			$$invalidate(3, estado.ultimoEstado = "Activado", estado);
+    			cambio = 1;
     		}
 
     		console.log("cambio");
+
+    		// uso websocket mediante mqtt.js (lado cliente)
+    		cliente.publish(topico, cambio, { qos: 2 }, function (err) {
+    			if (err) {
+    				console.log(`Error al publicar ${topico}: ${err}`);
+    			}
+    		});
+
+    		// usando REST para base de datos
     		logsServicio.agregarLog(estado).then(() => location.replace(`/dispositivos/${dispositivo.id}`));
-    		
     	}
 
     	const writable_props = ["id"];
@@ -17109,7 +17136,9 @@ var app = (function (L) {
     		dispositivosServicio,
     		dispositivoEsquema,
     		logsServicio,
+    		cliente,
     		id,
+    		topico,
     		dispositivo,
     		datosLogs,
     		valores,
@@ -17122,6 +17151,7 @@ var app = (function (L) {
 
     	$$self.$inject_state = $$props => {
     		if ("id" in $$props) $$invalidate(6, id = $$props.id);
+    		if ("topico" in $$props) topico = $$props.topico;
     		if ("dispositivo" in $$props) $$invalidate(0, dispositivo = $$props.dispositivo);
     		if ("datosLogs" in $$props) datosLogs = $$props.datosLogs;
     		if ("valores" in $$props) $$invalidate(1, valores = $$props.valores);
@@ -18608,12 +18638,12 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button2.$$.fragment);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$e, 73, 4, 2060);
+    			add_location(h2, file$e, 73, 4, 2065);
     			attr_dev(a0, "href", "/");
-    			add_location(a0, file$e, 80, 4, 2273);
+    			add_location(a0, file$e, 80, 4, 2278);
     			attr_dev(a1, "href", "/dispositivos");
-    			add_location(a1, file$e, 85, 4, 2385);
-    			add_location(main, file$e, 72, 0, 2049);
+    			add_location(a1, file$e, 85, 4, 2390);
+    			add_location(main, file$e, 72, 0, 2054);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -18732,7 +18762,7 @@ var app = (function (L) {
     	let data;
 
     	onMount(async () => {
-    		await medicionesServicio.obtenerDatos(id).then(respuesta => respuesta.json()).then(resultado => mediciones = resultado);
+    		await medicionesServicio.obtenerMediciones(id).then(respuesta => respuesta.json()).then(resultado => mediciones = resultado);
 
     		const options = {
     			hour: "numeric",
@@ -19452,8 +19482,8 @@ var app = (function (L) {
     			t1 = text(/*id*/ ctx[0]);
     			t2 = space();
     			create_component(datatable.$$.fragment);
-    			add_location(b, file$g, 41, 14, 995);
-    			add_location(p, file$g, 41, 8, 989);
+    			add_location(b, file$g, 41, 14, 1000);
+    			add_location(p, file$g, 41, 8, 994);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, p, anchor);
@@ -20313,14 +20343,14 @@ var app = (function (L) {
     			a1 = element("a");
     			create_component(button1.$$.fragment);
     			attr_dev(a0, "href", a0_href_value = "/dispositivos/" + /*id*/ ctx[0]);
-    			add_location(a0, file$g, 31, 4, 795);
-    			add_location(hr0, file$g, 36, 4, 926);
+    			add_location(a0, file$g, 31, 4, 800);
+    			add_location(hr0, file$g, 36, 4, 931);
     			attr_dev(h2, "class", "svelte-f9adgw");
-    			add_location(h2, file$g, 38, 4, 938);
-    			add_location(hr1, file$g, 62, 4, 1655);
+    			add_location(h2, file$g, 38, 4, 943);
+    			add_location(hr1, file$g, 62, 4, 1665);
     			attr_dev(a1, "href", a1_href_value = "/dispositivos/" + /*id*/ ctx[0]);
-    			add_location(a1, file$g, 63, 4, 1666);
-    			add_location(main, file$g, 30, 0, 784);
+    			add_location(a1, file$g, 63, 4, 1676);
+    			add_location(main, file$g, 30, 0, 789);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -20431,7 +20461,7 @@ var app = (function (L) {
     	let mediciones = [];
 
     	onMount(async () => {
-    		await medicionesServicio.obtenerDatos(id).then(respuesta => respuesta.json()).then(resultado => $$invalidate(1, mediciones = resultado));
+    		await medicionesServicio.obtenerMediciones(id).then(respuesta => respuesta.json()).then(resultado => $$invalidate(1, mediciones = resultado));
     	});
 
     	const writable_props = ["id"];

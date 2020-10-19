@@ -17,7 +17,7 @@
 
     onMount(async () => {
         await medicionesServicio
-            .obtenerDatos(id)
+            .obtenerMediciones(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (mediciones = resultado));
 
