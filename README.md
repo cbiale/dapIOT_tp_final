@@ -95,3 +95,9 @@ El esquema es el siguiente:
 En el siguiente video se puede ver el envio de datos usando websocket al broker Mqtt, para ello se usa `Mqtt.fx` *(un clientes MQTT)*.
 
 ![](./ejemplo_envio_ws.gif)
+
+El cliente se subscribe a los mensajes del nodo que estamos editando *(Id 6e9403bb-2394-4de1-a3c4-16c9a0e28275)*.
+
+Al realizar click en `Cambiar estado` podemos ver como en el cliente se visualiza el mensaje *(enviado por el aplicativo que corre en el navegador)* cuyo tópico es `6e9403bb-2394-4de1-a3c4-16c9a0e28275/cambio` con valor `1`.
+
+Luego cuando se vuelve a hacer click en `Cambiar estado` podemos ver como en el cliente se visualiza un nuevo mensaje, en este caso, se envía en el  tópico `6e9403bb-2394-4de1-a3c4-16c9a0e28275/cambio` el valor `0`.
