@@ -89,3 +89,9 @@ La ultima opción es directamente usar el websocket para comunicarse con el brok
 El esquema es el siguiente:
 
 ![](./mensajes_3.jpg)
+
+## Ejemplo de envío de datos por websocket
+
+En el siguiente video se puede ver el envio de datos usando websocket al broker Mqtt, para ello se usa `Mqtt.fx` *(un clientes MQTT)*.
+
+![](./ejemplo_envio_ws.gif)
