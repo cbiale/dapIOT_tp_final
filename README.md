@@ -6,7 +6,7 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 
 # Arquitectura
 
-![alt text](./esquema.jpg)
+![](./esquema.jpg)
 
 - **RethinkDB**: base de datos documental utilizada para almacenar datos sobre los dispositivos.
 - **Node.js**: funcionamiento de back-ends de `dispositivos` y `tiempos`.
@@ -76,13 +76,16 @@ Pasos:
 
 En la función `cambiar()` se envía datos al broker y luego se envía un POST al servidor para almacenar el cambio en la base de datos, es decir:
 
-frontend &rarr; Broker MQTT &rarr; Dispositivo
-frontend &rarr; Servidor REST &rarr; Base de datos
+![](./mensajes_1.jpg)
  
 
 Esto es una forma de trabajar, la otra es la siguiente:
 
-frontend &rarr; Servidor REST &rarr; (Broker MQTT y Base de datos) &rarr; Dispositivo.
+![](./mensajes_2.jpg)
+ 
 
 La ultima opción es directamente usar el websocket para comunicarse con el brocker MQTT y en el servidor que se encuentra escuchando por mensajes entrantes distinguir entre el mensaje de datos de sensores y el de cambio de un actuador, esto se debe modificar en [Mqtt.js](./backend-dispositivos/api/mqtt/mqtt.js). Se debe modificar en `cliente.on("message",...` y en `agregarMedicion`.
 
+El esquema es el siguiente:
+
+![](./mensajes_3.jpg)
