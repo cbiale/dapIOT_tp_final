@@ -84,7 +84,7 @@ Esto es una forma de trabajar, la otra es la siguiente:
 ![](./mensajes_2.jpg)
  
 
-La ultima opción es directamente usar el websocket para comunicarse con el brocker MQTT y en el servidor que se encuentra escuchando por mensajes entrantes distinguir entre el mensaje de datos de sensores y el de cambio de un actuador, esto se debe modificar en [Mqtt.js](./backend-dispositivos/api/mqtt/mqtt.js). Se debe modificar en `cliente.on("message",...` y en `agregarMedicion`.
+La ultima opción es directamente usar el websocket para comunicarse con el broker MQTT y en el servidor que se encuentra escuchando por mensajes entrantes distinguir entre el mensaje de datos de sensores y el de cambio de un actuador, esto se debe modificar en [Mqtt.js](./backend-dispositivos/api/mqtt/mqtt.js). Se debe modificar en `cliente.on("message",...` y en `agregarMedicion()`.
 
 El esquema es el siguiente:
 
