@@ -4,6 +4,25 @@
 
 El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplicaciones para IOT** de la *Especialización en Internet de las Cosas* dictada en la *Facultad de Ingeniería* de la *Universidad de Buenos Aires*.
 
+# Correr aplicación
+
+Para ejecutar la aplicación debe descargar el repositorio de la rama `develop`.
+
+En el directorio de descarga se ejecuta:
+
+```
+docker-compose up
+```
+
+Como paso previo se debe verificar que los siguientes puertos se encuentren disponibles:
+- 8081 *(Rethinkdb)*
+- 1883 *(Mosquitto)*
+- 9001 *(Mosquitto)*
+- 3000 *(Backend)*
+- 5000 *(Frontend)*
+
+Desde el navegador se debe acceder a `localhost:5000`.
+
 # Arquitectura
 
 ![](./esquema.jpg)
@@ -13,17 +32,18 @@ El proyecto corresponde al trabajo final de la asignatura **Desarrollo de aplica
 - **Svelte**: framework utilizado para el front-end.
 - **Mosquitto**: Broker MQTT.
 
-> Corren como nodos de `docker-compose` en una red denominada `tp-net` de tipo bridge. Ver [docker-compose.yml](./docker-compose.yml).
+Corren como nodos orquestados por `docker-compose` en una red denominada `tp-net` de tipo bridge. Ver [docker-compose.yml](./docker-compose.yml).
 
-Aparte de ello, en la carpeta `nodo` se ha definido el código necesario para la funcionalidad en los dispositivos `ESP32` usando C++ para Ardunio.
+Aparte de ello, en la carpeta `nodo` se ha definido el código necesario para la funcionalidad en los dispositivos `ESP32` usando C++ para Arduino.
 
 ## Librerías utilizadas
 
+Algunas de las librerías utilizadas son:
 - **Leaflet**: mapas.
 - **yul**: validaciones en formularios.
 - **svelte-frappe-charts**: gráficos del dashboard.
 - **Svelte Material UI**: componentes Svelte Material UI.
-- **MQTT.js**: cliente MQTT para Node.js y navegadores *(desde un navegador utiliza websockets)*.
+- **MQTT.js**: cliente MQTT para Node.js y navegadores *(dsde un navegador utiliza websockets)*.
 
 ## Comunicación usando webSockets
 
