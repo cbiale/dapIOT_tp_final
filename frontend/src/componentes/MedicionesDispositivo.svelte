@@ -14,11 +14,9 @@
 
     onMount(async () => {
         await medicionesServicio
-            .obtenerDatos(id)
+            .obtenerMediciones(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (mediciones = resultado));
-
-        mediciones = mediciones.reverse();
     });
 </script>
 
@@ -31,12 +29,19 @@
 </style>
 
 <main>
+    <a href="/dispositivos/{id}">
+        <Button variant="outlined">
+            <Label>Volver</Label>
+        </Button>
+    </a>
+    <hr />
+
     <h2>Dispositivo</h2>
 
     {#if mediciones}
         <p>Id <b>{id}</b></p>
 
-        <DataTable table$aria-label="Listado de Mediciones">
+        <DataTable table$aria-label="Listado de Dispositivos">
             <Head>
                 <Row>
                     <Cell>Momento</Cell>
@@ -51,7 +56,7 @@
                         <Cell>{medicion.temperatura}</Cell>
                         <Cell>{medicion.humedad}</Cell>
                     </Row>
-                {/each}
+                     {/each}
             </Body>
         </DataTable>
     {/if}

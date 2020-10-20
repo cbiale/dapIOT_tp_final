@@ -16,12 +16,9 @@
 
     onMount(async () => {
         await logsServicio
-            .obtenerDatos(id)
+            .obtenerLogs(id)
             .then((respuesta) => respuesta.json())
-            .then((resultado) => (logs = resultado));
-
-        logs = logs.reverse();
-        
+            .then((resultado) => (logs = resultado));        
     });
 
 </script>
@@ -35,11 +32,19 @@
 </style>
 
 <main>
+    <a href="/dispositivos/{id}">
+        <Button variant="outlined">
+            <Label>Volver</Label>
+        </Button>
+    </a>
+    <hr />
+
     <h2>Dispositivo</h2>
 
     {#if logs}
         <p>Id <b>{id}</b></p>
     {/if}
+
     <DataTable table$aria-label="Listado de Logs">
         <Head>
             <Row>

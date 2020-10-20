@@ -8,7 +8,7 @@
 const int LED                    = 32;
 const int DHT22_PIN              = 23;
 // Dispositivo ID
-const String DISPOSITIVO_ID      = "1";
+const String DISPOSITIVO_ID      = "05a80e1b-5b85-44e8-a27f-5a21b7c947e4";
 // Wifi
 const String WIFI_SSID           = "Pippe";
 const String WIFI_CLAVE          = "carolina0304";
@@ -17,7 +17,8 @@ const String MQTT_SERVIDOR       = "192.168.0.10";
 const int    MQTT_PUERTO         = 1883;
 // topicos
 const String TOPICO_SENSORES     = DISPOSITIVO_ID + "/sensores";
-const String TOPICO_ACTUADOR     = DISPOSITIVO_ID + "/actuador";
+// const String TOPICO_ACTUADOR     = DISPOSITIVO_ID + "/actuador";
+const String TOPICO_ACTUADOR_C   = DISPOSITIVO_ID + "/cambio";
 
 // LED
 static uint32_t estadoLed = 0;
@@ -74,7 +75,7 @@ void conectarMQTT(){
         if (clienteMqtt.connect(DISPOSITIVO_ID.c_str())) {
             Serial.println("conectado!!");
             // Subscribo a un tópico
-            clienteMqtt.subscribe(TOPICO_ACTUADOR.c_str());
+            clienteMqtt.subscribe(TOPICO_ACTUADOR_C.c_str());
         } else {
             Serial.print("fallo, rc = ");
             Serial.print(clienteMqtt.state());
@@ -96,7 +97,7 @@ void publicarMqtt (String topico, String valor){
 }
 
 void subscribirMqtt (char* topico, byte* valor, unsigned int largo){
-    if (strcmp(topico, TOPICO_ACTUADOR.c_str()) == 0){
+    if (strcmp(topico, TOPICO_ACTUADOR_C.c_str()) == 0){
         // agrega el caracter nulo
         valor[largo] = '\0';
         // string -> int
@@ -165,9 +166,9 @@ void appLoop() {
     int temporalHumedad = random(30, 101);
     String valores = String(" { \"temperatura\": ") + String(temporalTemperatura);
     valores = valores + String(", \"humedad\": ") + String(temporalHumedad) + String("}"); 
-    publicarMqtt(TOPICO_SENSORES, valores);
+    // publicarMqtt(TOPICO_SENSORES, valores);
     String mensajeLed = String("" + estadoLed);
-    publicarMqtt(TOPICO_ACTUADOR, mensajeLed);
+    // publicarMqtt(TOPICO_ACTUADOR, mensajeLed);
   }
 
 }

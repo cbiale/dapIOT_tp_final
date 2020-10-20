@@ -1,18 +1,20 @@
-let r = require('../db/db');
+var r = require('../db/db');
 
 // listado de dispositivos
 exports.listarDispositivos = async function (req, res, next) {
+    
     try {
-        var datos = await r.db('iot').table('dispositivos').filter(
-            {
-                borrado: 0
-            }
-        ).run(r.conn);
+        var datos = await r.db('iot').table('dispositivos')
+            .filter(
+                {
+                    borrado: 0
+                }
+            ).run(r.conn);
     } catch (err) {
         throw new Error(err);
         // analizar console.warn(err);
     }
-    resultado = await datos.toArray();
+    var resultado = await datos.toArray();
     res.status(200).json(resultado);
 };
 
@@ -22,7 +24,8 @@ exports.obtenerDispositivo = async function (req, res, next) {
     console.log(`Obteniendo dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).run(r.conn);
+        var resultado = await r.db('iot').table('dispositivos')
+        .get(id).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
@@ -35,7 +38,8 @@ exports.eliminarDispositivo = async function (req, res, next) {
     console.log(`Eliminando dispositivo: ${id}`);
 
     try {
-        var resultado = await r.db('iot').table('dispositivos').get(id).update(
+        var resultado = await r.db('iot').table('dispositivos')
+        .get(id).update(
             { borrado: 1 }
         ).run(r.conn);
     } catch (err1) {

@@ -7,7 +7,6 @@
 
     import { dispositivosServicio } from "../servicios/dispositivos.servicio";
     import { dispositivoEsquema } from "../esquemas/dispositivos.esquema";
-    import Ruteador from "../rutas/Ruteador.svelte";
 
     let dispositivo;
 

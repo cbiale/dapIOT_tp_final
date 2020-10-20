@@ -1,4 +1,4 @@
-let r = require('../db/db');
+var r = require('../db/db');
 
 // listado de mediciones
 exports.listarMediciones = async function (req, res, next) {
@@ -7,10 +7,11 @@ exports.listarMediciones = async function (req, res, next) {
 
     try {
         var datos = await r.db('iot').table('mediciones')
+            .orderBy({ index: r.desc('tiempo') })
             .filter({ 'dispositivoId': id }).run(r.conn);
     } catch (err) {
         console.warn(err);
     }
-    resultado = await datos.toArray();
+    var resultado = await datos.toArray();
     res.status(200).json(resultado);
 };

@@ -1,6 +1,8 @@
 const BASE_URL = "http://localhost:3000/api/v1/dispositivos/"
 
+
 async function listarDispositivos() {
+
     let respuesta = await fetch(BASE_URL, {
         method: 'GET',
     })

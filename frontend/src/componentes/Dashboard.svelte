@@ -15,10 +15,9 @@
     let vTemperatura = [];
     let data;
 
-
     onMount(async () => {
         await medicionesServicio
-            .obtenerDatos(id)
+            .obtenerMediciones(id)
             .then((respuesta) => respuesta.json())
             .then((resultado) => (mediciones = resultado));
 
@@ -39,13 +38,11 @@
             (key) => mediciones[key].humedad === undefined ? null : mediciones[key].humedad
         );
         vLabels = Object.keys(mediciones).map((key) => mediciones[key].tiempo);
-        // formate a labels
+        // formateo de labels
         for (var i= 0; i < vLabels.length; i++) {
             vLabels[i] = new Date(vLabels[i]).toLocaleDateString("ES-es", options);
         }
-        console.log(vHumedad);
-        console.log(vTemperatura);
-        console.log(vLabels);
+        
         data = {
             labels: vLabels,
             datasets: [
